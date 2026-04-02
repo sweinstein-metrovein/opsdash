@@ -29,7 +29,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as { id?: string }).id = token.sub;
       }
       // Expose access_token to server-side API routes
-      (session as Record<string, unknown>).access_token = token.access_token;
+      (session as unknown as Record<string, unknown>).access_token = token.access_token;
       return session;
     },
   },
