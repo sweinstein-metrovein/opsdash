@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const accessToken = (session as Record<string, unknown>).access_token as string | undefined;
+  const accessToken = (session as unknown as Record<string, unknown>).access_token as string | undefined;
   if (!accessToken) {
     return NextResponse.json(
       { error: "no_token", message: "Google Drive access not granted. Please sign out and sign back in." },
