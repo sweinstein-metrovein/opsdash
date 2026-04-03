@@ -84,7 +84,8 @@ export interface DetailResult {
   rowHighlights?: boolean[];    // true = red highlight
   orangeHighlights?: boolean[]; // true = orange highlight
   wideColumns?: number[];       // column indices that should wrap text
-  linkColumns?: number[];       // column indices whose cell value is a URL — rendered as "Edit Link"
+  linkColumns?: number[];       // column indices whose cell value is a URL — rendered as "Edit Link ↗"
+  textLinkColumns?: number[];   // column indices where cell = "display text|||url" — rendered as hyperlinked text
 }
 
 /** Fields that should never appear in any detail view */
@@ -110,7 +111,7 @@ export async function getHeldClaimsDetail(filter: ViewFilter): Promise<DetailRes
     FROM ${tbl("daily_held_claims")}
     ${whereClause(filter)}
     ORDER BY date_of_service DESC
-    LIMIT 10000
+    LIMIT 20000
   `;
 
   const rows = await runQuery<Record<string, unknown>>(sql);
@@ -173,7 +174,7 @@ export async function getMissingOrdersDetail(filter: ViewFilter): Promise<Detail
     FROM ${tbl("missing_orders")}
     ${where}
     ORDER BY AppointmentStartDate DESC
-    LIMIT 10000
+    LIMIT 20000
   `;
 
   const rows = await runQuery<Record<string, unknown>>(sql);
@@ -227,7 +228,7 @@ export async function getAlertsDetail(filter: ViewFilter): Promise<DetailResult>
     FROM ${tbl("outstanding_alerts_flags")}
     ${whereClause(filter, { stateField: "HomeState", sisterField: "SisterFacility_ID" })}
     ORDER BY FacilityName, Employee
-    LIMIT 10000
+    LIMIT 20000
   `;
 
   const rows = await runQuery<Record<string, unknown>>(sql);
@@ -279,7 +280,7 @@ export async function getMissingNpovDetail(filter: ViewFilter): Promise<DetailRe
     FROM ${tbl("home_location_missing_npov")}
     ${whereClause(filter, { stateField: "FacilityState", sisterField: "SistersID" })}
     ORDER BY Date ASC
-    LIMIT 10000
+    LIMIT 20000
   `;
 
   const rows = await runQuery<Record<string, unknown>>(sql);
@@ -354,7 +355,7 @@ export async function getIntakeFormsDetail(filter: ViewFilter): Promise<DetailRe
     FROM ${tbl("upcoming_intake_form_status_tablev2", "luma")}
     ${where}
     ORDER BY earliest_scheduled_consult_start_datetime ASC
-    LIMIT 10000
+    LIMIT 20000
   `;
 
   const rows = await runQuery<Record<string, unknown>>(sql);
@@ -437,7 +438,7 @@ export async function getEligibilityDetail(filter: ViewFilter): Promise<DetailRe
     FROM ${tbl("appointmnet_ins_eligibility")}
     ${where}
     ORDER BY AppointmentStartDate ASC
-    LIMIT 10000
+    LIMIT 20000
   `;
 
   const rows = await runQuery<Record<string, unknown>>(sql);
@@ -498,7 +499,7 @@ export async function getMissingStatusesDetail(filter: ViewFilter): Promise<Deta
     FROM ${tbl("scheduled_procedure_statuses")}
     ${where}
     ORDER BY AppointmentStartDate ASC
-    LIMIT 10000
+    LIMIT 20000
   `;
 
   const rows = await runQuery<Record<string, unknown>>(sql);
@@ -565,7 +566,7 @@ export async function getOutstandingPosDetail(filter: ViewFilter): Promise<Detai
     FROM ${tbl("outstanding_pos")}
     ${where}
     ORDER BY \`Days Outstanding\` DESC
-    LIMIT 10000
+    LIMIT 20000
   `;
 
   const rows = await runQuery<Record<string, unknown>>(sql);
@@ -625,7 +626,7 @@ export async function getMissedCopaysDetail(filter: ViewFilter): Promise<DetailR
     FROM ${tbl("missed_copays")}
     ${where}
     ORDER BY AttendedAppointmentDate DESC
-    LIMIT 10000
+    LIMIT 20000
   `;
 
   const rows = await runQuery<Record<string, unknown>>(sql);
@@ -724,8 +725,8 @@ export async function getCBErrorsDetail(filter: ViewFilter): Promise<DetailResul
     SELECT
       state,
       facility,
-      EditFormCustomLink,
       FlagType,
+      EditFormCustomLink,
       appointmentDate,
       patientId,
       patientName,
@@ -754,13 +755,13 @@ export async function getCBErrorsDetail(filter: ViewFilter): Promise<DetailResul
     FROM ${tbl("checks_and_balances")}
     ${where}
     ORDER BY appointmentDate DESC
-    LIMIT 10000
+    LIMIT 20000
   `;
 
   const rows = await runQuery<Record<string, unknown>>(sql);
 
   const headers = [
-    "State", "Clinic", "Edit", "Flag Type", "Date",
+    "State", "Clinic", "Flag Type", "Date",
     "Patient ID", "Patient Name", "Total Collection",
     "Appt Type", "Appt Status", "Appt Time",
     "Copay Due", "Balance Due", "Copay Paid", "Balance Paid", "Pre-Collect Paid",
@@ -772,8 +773,8 @@ export async function getCBErrorsDetail(filter: ViewFilter): Promise<DetailResul
   const formatted = rows.map(r => [
     str(r.state),
     str(r.facility),
-    str(r.EditFormCustomLink),        // col 2 — rendered as hyperlink
-    str(r.FlagType),
+    // col 2: "FlagType|||EditFormCustomLink" — rendered as hyperlinked flag text
+    `${str(r.FlagType)}|||${str(r.EditFormCustomLink)}`,
     formatBQDate(r.appointmentDate),
     str(r.patientId),
     str(r.patientName),
@@ -808,7 +809,7 @@ export async function getCBErrorsDetail(filter: ViewFilter): Promise<DetailResul
     rows: formatted,
     total: rows.length,
     rowHighlights,
-    linkColumns: [2],   // EditFormCustomLink
-    wideColumns: [28],  // notes
+    textLinkColumns: [2], // FlagType text hyperlinked with EditFormCustomLink url
+    wideColumns: [27],    // notes (was 28, shifted -1 after removing Edit column)
   };
 }
