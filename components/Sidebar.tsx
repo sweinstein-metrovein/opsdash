@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { STATES, getSisterGroups } from "@/lib/facilities";
 
 const STATE_LABELS: Record<string, string> = {
@@ -19,9 +20,24 @@ const ACTIVE_BG   = "#EFF9FF";   // very light blue tint for active bg
 export default function Sidebar() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const activeSister = searchParams.get("sister") ? Number(searchParams.get("sister")) : null;
   const activeState  = searchParams.get("state") ?? null;
   const activeView   = searchParams.get("view") ?? null;
+
+  // Role-based visibility
+  const userRole   = session?.userRole   ?? "admin";
+  const userState  = session?.userState  ?? null;
+  const userSister = session?.userSister ?? null;
+
+  // Which states to show in sidebar
+  const visibleStates = userRole === "admin"
+    ? STATES
+    : userRole === "regional" && userState
+      ? STATES.filter(s => s === userState)
+      : userRole === "sister" && userState
+        ? STATES.filter(s => s === userState)
+        : STATES;
 
   const [expandedStates, setExpandedStates] = useState<Set<string>>(
     new Set(activeState ? [activeState] : [])
@@ -62,26 +78,28 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Company-wide view */}
-      <div className="pt-4 pb-1">
-        <div
-          className="font-semibold uppercase tracking-widest px-5 pb-2"
-          style={{ fontSize: "10px", color: "#94a3b8" }}
-        >
-          Company
+      {/* Company-wide view — admins only */}
+      {userRole === "admin" && (
+        <div className="pt-4 pb-1">
+          <div
+            className="font-semibold uppercase tracking-widest px-5 pb-2"
+            style={{ fontSize: "10px", color: "#94a3b8" }}
+          >
+            Company
+          </div>
+          <Link
+            href="/dashboard?view=company"
+            className="flex items-center gap-2.5 px-5 py-2 text-[13px] border-l-[3px] transition-all"
+            style={
+              activeView === "company"
+                ? { background: ACTIVE_BG, color: ACTIVE_TEXT, borderLeftColor: BRAND_BLUE, fontWeight: 600 }
+                : { color: "#64748b", borderLeftColor: "transparent" }
+            }
+          >
+            <span className="text-base">🏢</span> All Clinics
+          </Link>
         </div>
-        <Link
-          href="/dashboard?view=company"
-          className="flex items-center gap-2.5 px-5 py-2 text-[13px] border-l-[3px] transition-all"
-          style={
-            activeView === "company"
-              ? { background: ACTIVE_BG, color: ACTIVE_TEXT, borderLeftColor: BRAND_BLUE, fontWeight: 600 }
-              : { color: "#64748b", borderLeftColor: "transparent" }
-          }
-        >
-          <span className="text-base">🏢</span> All Clinics
-        </Link>
-      </div>
+      )}
 
       {/* States + sister groups */}
       <div className="flex-1 pb-4">
@@ -92,8 +110,12 @@ export default function Sidebar() {
           States &amp; Clinics
         </div>
 
-        {STATES.map(state => {
-          const groups       = getSisterGroups(state);
+        {visibleStates.map(state => {
+          const allGroups    = getSisterGroups(state);
+          // Sister-level: only show their specific group
+          const groups = userRole === "sister" && userSister !== null
+            ? allGroups.filter(g => g.sisterFacilityId === userSister)
+            : allGroups;
           const isExpanded   = expandedStates.has(state);
           const isStateActive = activeState === state && !activeSister;
 
@@ -168,19 +190,24 @@ export default function Sidebar() {
       <div className="px-5 py-4" style={{ borderTop: "1px solid #e2e8f0" }}>
         <div className="flex items-center gap-2.5">
           <div
-            className="w-7 h-7 rounded-full flex items-center justify-center font-bold"
+            className="w-7 h-7 rounded-full flex items-center justify-center font-bold flex-shrink-0"
             style={{
               fontSize: "11px",
-              background: "rgba(142,213,248,0.25)",
+              background: "rgba(212,241,255,0.5)",
               border: `1.5px solid ${BRAND_BLUE}`,
               color: ACTIVE_TEXT,
             }}
           >
-            MV
+            {(session?.userName ?? session?.user?.name ?? "MV")
+              .split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()}
           </div>
-          <div>
-            <div className="font-semibold" style={{ fontSize: "12px", color: "#334155" }}>Admin</div>
-            <div style={{ fontSize: "10px", color: "#94a3b8" }}>Metro Vein Centers</div>
+          <div className="min-w-0">
+            <div className="font-semibold truncate" style={{ fontSize: "12px", color: "#334155" }}>
+              {session?.userName ?? session?.user?.name ?? "Staff"}
+            </div>
+            <div className="capitalize" style={{ fontSize: "10px", color: "#94a3b8" }}>
+              {userRole === "admin" ? "Admin" : userRole === "regional" ? `Regional · ${userState}` : "Clinic Staff"}
+            </div>
           </div>
         </div>
       </div>
