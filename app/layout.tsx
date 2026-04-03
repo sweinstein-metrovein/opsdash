@@ -12,6 +12,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "OpsDash – Metro Vein Centers",
   description: "Internal Operations Dashboard",
+  icons: {
+    icon: "/mvc-logo.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

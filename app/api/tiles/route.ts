@@ -3,6 +3,7 @@ import { ViewFilter } from "@/lib/queries";
 import {
   getHeldClaimsCount, getMissingOrdersCount, getMissingNpovCount, getAlertsCount,
   getIntakeFormsCount, getEligibilityCount, getMissingStatusesCount,
+  getScheduleUpdatesCount, getMissingDocsCount,
   getOutstandingPosCount, getMissedCopaysCount, getCopayPctCount, getStockingsCount,
   getCBErrorsCount, getFiveStarsCount,
 } from "@/lib/queries";
@@ -36,22 +37,24 @@ export async function GET(req: NextRequest) {
 
   const [
     heldClaims, missingOrders, missingNpov, alerts,
-    intakeForms, eligibility, missingStatuses,
+    intakeForms, eligibility, missingStatuses, scheduleUpdates, missingDocs,
     outstandingPos, missedCopays, copayPct, stockings, cbErrors, fiveStars,
   ] = await Promise.all([
-    safe("held-claims",       () => getHeldClaimsCount(filter)),
-    safe("missing-orders",    () => getMissingOrdersCount(filter)),
-    safe("missing-npov",      () => getMissingNpovCount(filter)),
-    safe("alerts",            () => getAlertsCount(filter)),
-    safe("intake-forms",      () => getIntakeFormsCount(filter)),
-    safe("eligibility",       () => getEligibilityCount(filter)),
-    safe("missing-statuses",  () => getMissingStatusesCount(filter)),
-    safe("outstanding-pos",   () => getOutstandingPosCount(filter)),
-    safe("missed-copays",     () => getMissedCopaysCount(filter)),
-    safe("copay-pct",         () => getCopayPctCount(filter)),
-    safe("stockings",         () => getStockingsCount(filter)),
-    safe("cb-errors",         () => getCBErrorsCount(filter)),
-    safe("five-stars",        () => getFiveStarsCount(filter)),
+    safe("held-claims",        () => getHeldClaimsCount(filter)),
+    safe("missing-orders",     () => getMissingOrdersCount(filter)),
+    safe("missing-npov",       () => getMissingNpovCount(filter)),
+    safe("alerts",             () => getAlertsCount(filter)),
+    safe("intake-forms",       () => getIntakeFormsCount(filter)),
+    safe("eligibility",        () => getEligibilityCount(filter)),
+    safe("missing-statuses",   () => getMissingStatusesCount(filter)),
+    safe("schedule-updates",   () => getScheduleUpdatesCount(filter)),
+    safe("missing-docs",       () => getMissingDocsCount(filter)),
+    safe("outstanding-pos",    () => getOutstandingPosCount(filter)),
+    safe("missed-copays",      () => getMissedCopaysCount(filter)),
+    safe("copay-pct",          () => getCopayPctCount(filter)),
+    safe("stockings",          () => getStockingsCount(filter)),
+    safe("cb-errors",          () => getCBErrorsCount(filter)),
+    safe("five-stars",         () => getFiveStarsCount(filter)),
   ]);
 
   return NextResponse.json({
@@ -62,8 +65,8 @@ export async function GET(req: NextRequest) {
     "intake-forms":         intakeForms,
     "eligibility":          eligibility,
     "missing-statuses":     missingStatuses,
-    "schedule-updates":     null,
-    "missing-docs":         null,
+    "schedule-updates":     scheduleUpdates,
+    "missing-docs":         missingDocs,
     "first-tx-calls":       null,
     "voicemails":           null,
     "outstanding-pos":      outstandingPos,

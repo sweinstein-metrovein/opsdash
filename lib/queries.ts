@@ -700,6 +700,136 @@ export async function getFiveStarsCount(filter: ViewFilter): Promise<number> {
   return Number(rows[0]?.total ?? 0);
 }
 
+// ─── TILE 9 — MISSING DOCUMENTS ──────────────────────────────────────────────
+
+export async function getMissingDocsCount(filter: ViewFilter): Promise<number> {
+  const sql = `
+    SELECT SUM(MissingDocumentCount) AS total
+    FROM ${tbl("missing_documents")}
+    ${whereClause(filter, { stateField: "earliest_attended_consult_facility_state", sisterField: "SisterFacilityID" })}
+  `;
+  const rows = await runQuery<{ total: unknown }>(sql);
+  return Number(rows[0]?.total ?? 0);
+}
+
+export async function getMissingDocsDetail(filter: ViewFilter): Promise<DetailResult> {
+  const sql = `
+    SELECT
+      earliest_attended_consult_facility_state,
+      earliest_attended_consult_facility,
+      full_name,
+      patient_internal_id,
+      phone1,
+      earliest_attended_consult_date,
+      MissingDocumentTypes,
+      MissingDocumentCount,
+      DaysOutstanding,
+      DriversLicenseReceived,
+      PrimaryInsuranceReceived,
+      NewPatientIntakeReceived,
+      SecondaryInsuranceReceived,
+      luma_text_link
+    FROM ${tbl("missing_documents")}
+    ${whereClause(filter, { stateField: "earliest_attended_consult_facility_state", sisterField: "SisterFacilityID" })}
+    ORDER BY DaysOutstanding DESC
+    LIMIT 20000
+  `;
+
+  const rows = await runQuery<Record<string, unknown>>(sql);
+
+  const headers = [
+    "State", "Clinic", "Patient Name", "Patient ID",
+    "Phone", "Consult Date", "Missing Doc Types",
+    "Missing Count", "Days Outstanding",
+    "DL Received", "Primary Ins Received", "NPI Received", "Secondary Ins Received",
+    "Luma Link",
+  ];
+
+  const formatted = rows.map(r => [
+    str(r.earliest_attended_consult_facility_state),
+    str(r.earliest_attended_consult_facility),
+    str(r.full_name),
+    str(r.patient_internal_id),
+    str(r.phone1),
+    formatBQDate(r.earliest_attended_consult_date),
+    str(r.MissingDocumentTypes),
+    str(r.MissingDocumentCount),
+    str(r.DaysOutstanding),
+    r.DriversLicenseReceived ? "Yes" : "No",
+    r.PrimaryInsuranceReceived ? "Yes" : "No",
+    r.NewPatientIntakeReceived ? "Yes" : "No",
+    r.SecondaryInsuranceReceived ? "Yes" : "No",
+    str(r.luma_text_link),
+  ]);
+
+  return {
+    headers,
+    rows: formatted,
+    total: rows.length,
+    linkColumns: [13], // luma_text_link → "Edit Link ↗"
+  };
+}
+
+// ─── TILE 8 — SCHEDULE UPDATES ───────────────────────────────────────────────
+
+export async function getScheduleUpdatesCount(filter: ViewFilter): Promise<number> {
+  const sql = `
+    SELECT COUNT(*) AS cnt
+    FROM ${tbl("schedule_updates")}
+    ${whereClause(filter, { stateField: "state", sisterField: "SisterFacilityID" })}
+  `;
+  const rows = await runQuery<{ cnt: bigint | number }>(sql);
+  return Number(rows[0]?.cnt ?? 0);
+}
+
+export async function getScheduleUpdatesDetail(filter: ViewFilter): Promise<DetailResult> {
+  const sql = `
+    SELECT
+      state,
+      FacilityName,
+      PatientName,
+      PatientID,
+      AppointmentType,
+      AppointmentStartDate,
+      AppointmentRespProvider,
+      AppointmentStatus,
+      PrimaryInsuranceCarrier,
+      PrimaryInsuranceID,
+      AppointmentNotes,
+      EntryDate
+    FROM ${tbl("schedule_updates")}
+    ${whereClause(filter, { stateField: "state", sisterField: "SisterFacilityID" })}
+    ORDER BY AppointmentStartDate ASC
+    LIMIT 20000
+  `;
+
+  const rows = await runQuery<Record<string, unknown>>(sql);
+
+  const headers = [
+    "State", "Clinic", "Patient Name", "Patient ID",
+    "Appt Type", "Appt Date", "Provider",
+    "Appt Status", "Insurance Carrier", "Insurance ID",
+    "Notes", "Entry Date",
+  ];
+
+  const formatted = rows.map(r => [
+    str(r.state),
+    str(r.FacilityName),
+    str(r.PatientName),
+    str(r.PatientID),
+    str(r.AppointmentType),
+    formatBQDateTime(r.AppointmentStartDate),
+    str(r.AppointmentRespProvider),
+    str(r.AppointmentStatus),
+    str(r.PrimaryInsuranceCarrier),
+    str(r.PrimaryInsuranceID),
+    str(r.AppointmentNotes),
+    formatBQDate(r.EntryDate),
+  ]);
+
+  return { headers, rows: formatted, total: rows.length, wideColumns: [10] };
+}
+
 // ─── TILE 14 — FLAGGED C&B ERRORS ────────────────────────────────────────────
 // Count: rows WHERE FlagType IS NOT NULL per aggregate.
 // Detail: ALL rows ordered by appointmentDate DESC; flagged rows highlighted red.

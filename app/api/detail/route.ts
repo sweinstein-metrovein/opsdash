@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ViewFilter, getHeldClaimsDetail, getMissingOrdersDetail, getMissingNpovDetail, getAlertsDetail, getIntakeFormsDetail, getEligibilityDetail, getMissingStatusesDetail, getOutstandingPosDetail, getMissedCopaysDetail, getCBErrorsDetail } from "@/lib/queries";
+import { ViewFilter, getHeldClaimsDetail, getMissingOrdersDetail, getMissingNpovDetail, getAlertsDetail, getIntakeFormsDetail, getEligibilityDetail, getMissingStatusesDetail, getScheduleUpdatesDetail, getMissingDocsDetail, getOutstandingPosDetail, getMissedCopaysDetail, getCBErrorsDetail } from "@/lib/queries";
 import { MOCK_DRILL_DATA } from "@/lib/mock-data";
 
 function getFilter(req: NextRequest): ViewFilter {
@@ -46,6 +46,14 @@ export async function GET(req: NextRequest) {
     }
     if (tile === "missing-statuses") {
       const data = await getMissingStatusesDetail(filter);
+      return NextResponse.json(data);
+    }
+    if (tile === "schedule-updates") {
+      const data = await getScheduleUpdatesDetail(filter);
+      return NextResponse.json(data);
+    }
+    if (tile === "missing-docs") {
+      const data = await getMissingDocsDetail(filter);
       return NextResponse.json(data);
     }
     if (tile === "outstanding-pos") {
