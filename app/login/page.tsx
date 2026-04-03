@@ -2,8 +2,13 @@
 
 import Image from "next/image";
 import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
+
   return (
     <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
       <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-sm text-center">
@@ -14,6 +19,25 @@ export default function LoginPage() {
         <p className="text-[12px] text-slate-400 mb-8 tracking-widest uppercase">
           Operations Dashboard
         </p>
+
+        {/* Error message */}
+        {error === "AccessDenied" && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-left">
+            <p className="text-[13px] font-semibold text-red-700 mb-0.5">Access Denied</p>
+            <p className="text-[12px] text-red-600">
+              Your account is not set up for access yet. Contact your administrator to be added.
+            </p>
+          </div>
+        )}
+
+        {error && error !== "AccessDenied" && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
+            <p className="text-[13px] font-semibold text-amber-700 mb-0.5">Sign-in Error</p>
+            <p className="text-[12px] text-amber-600">
+              Something went wrong. Please try again or contact your administrator.
+            </p>
+          </div>
+        )}
 
         <button
           onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
@@ -33,5 +57,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }
