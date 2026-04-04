@@ -13,7 +13,8 @@ export const metadata: Metadata = {
   title: "OpsDash – Metro Vein Centers",
   description: "Internal Operations Dashboard",
   icons: {
-    icon: "/mvc-logo.png",
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
   },
 };
 
