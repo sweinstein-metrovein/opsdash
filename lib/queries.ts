@@ -1187,3 +1187,154 @@ export async function getVoicemailsDetail(filter: ViewFilter): Promise<DetailRes
     },
   };
 }
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+
+export interface NotificationItem {
+  type: "voicemail" | "same-day-booking";
+  tileId: string;
+  rowKey: string;
+  sortTime: string;         // ISO string for sorting
+  isAcknowledged: boolean;
+  acknowledgedBy: string;
+  acknowledgedAt: string;
+  // Common
+  patientName: string;
+  patientId: string;
+  phone: string;
+  state: string;
+  facility: string;
+  timeDisplay: string;
+  // Voicemail-specific
+  email?: string;
+  recordingLink?: string;
+  // Same-day booking specific
+  insuranceCarrier?: string;
+  apptType?: string;
+  apptStatus?: string;
+  apptDate?: string;
+  createdBy?: string;
+  jobTitle?: string;
+  localApptTime?: string;
+  loginUser?: string;
+  listName?: string;
+  attended?: string;
+}
+
+export async function getTodayVoicemailNotifications(filter: ViewFilter): Promise<NotificationItem[]> {
+  const cond = filterCondition(filter, "v", {
+    stateField: "FacilityState",
+    sisterField: "CAST(v.SisterFacilityID AS INT64)",
+  });
+  const sql = `
+    SELECT
+      v.UniqueID,
+      v.FacilityState,
+      v.FacilityName,
+      CONCAT(v.PatientFirst, ' ', v.PatientLast) AS PatientName,
+      v.PatientID,
+      v.PatientPhoneNumber,
+      v.PatientEmail,
+      v.UploadDateTimeEST,
+      v.RecordingLink,
+      ack.acknowledged_by AS _ack_by,
+      ack.acknowledged_at AS _ack_at
+    FROM ${tbl("voicemails")} v
+    LEFT JOIN (
+      SELECT row_key, acknowledged_by, acknowledged_at
+      FROM ${tbl("acknowledgments")}
+      WHERE tile_id = 'voicemails' AND revoked_at IS NULL
+    ) ack ON ack.row_key = v.UniqueID
+    WHERE DATE(v.UploadDateTimeEST) = CURRENT_DATE()
+      AND ${cond}
+    ORDER BY v.UploadDateTimeEST DESC
+    LIMIT 50
+  `;
+
+  const rows = await runQuery<Record<string, unknown>>(sql);
+
+  return rows.map(r => ({
+    type:            "voicemail" as const,
+    tileId:          "voicemails",
+    rowKey:          str(r.UniqueID),
+    sortTime:        formatBQDateTime(r.UploadDateTimeEST),
+    isAcknowledged:  r._ack_by != null,
+    acknowledgedBy:  r._ack_by ? str(r._ack_by) : "",
+    acknowledgedAt:  r._ack_at ? formatBQDateTime(r._ack_at) : "",
+    patientName:     str(r.PatientName),
+    patientId:       str(r.PatientID),
+    phone:           str(r.PatientPhoneNumber),
+    state:           str(r.FacilityState),
+    facility:        str(r.FacilityName),
+    timeDisplay:     formatBQDateTime(r.UploadDateTimeEST),
+    email:           str(r.PatientEmail),
+    recordingLink:   str(r.RecordingLink),
+  }));
+}
+
+export async function getTodaySameDayBookingNotifications(filter: ViewFilter): Promise<NotificationItem[]> {
+  const cond = filterCondition(filter, "s", {
+    stateField:  "FacilityState",
+    sisterField: "s.SisterFacilityID",
+  });
+  const sql = `
+    SELECT
+      CAST(s.AppointmentID AS STRING)        AS row_key,
+      s.FacilityState,
+      s.FacilityName,
+      CONCAT(s.PatientFirst, ' ', s.PatientLast) AS PatientName,
+      s.PatientID,
+      s.PatientPhone1,
+      s.NAME                                  AS InsuranceCarrier,
+      s.AppointmentType,
+      s.clean_appt_type,
+      s.AppointmentStatus,
+      s.AppointmentStartDate,
+      s.AppointmentCreatedBy,
+      s.LoginUser,
+      s.JobTittle,
+      s.LocalAppointmentDateTimeFormatted,
+      s.ListName,
+      s.Attended,
+      ack.acknowledged_by                     AS _ack_by,
+      ack.acknowledged_at                     AS _ack_at
+    FROM \`${process.env.BIGQUERY_PROJECT_ID}.report_automation.same_day_bookings\` s
+    LEFT JOIN (
+      SELECT row_key, acknowledged_by, acknowledged_at
+      FROM ${tbl("acknowledgments")}
+      WHERE tile_id = 'same-day-bookings' AND revoked_at IS NULL
+    ) ack ON ack.row_key = CAST(s.AppointmentID AS STRING)
+    WHERE DATE(s.AppointmentStartDate) = CURRENT_DATE()
+      AND ${cond}
+    ORDER BY s.AppointmentStartDate DESC
+    LIMIT 50
+  `;
+
+  const rows = await runQuery<Record<string, unknown>>(sql);
+
+  return rows.map(r => ({
+    type:             "same-day-booking" as const,
+    tileId:           "same-day-bookings",
+    rowKey:           str(r.row_key),
+    sortTime:         formatBQDateTime(r.AppointmentStartDate),
+    isAcknowledged:   r._ack_by != null,
+    acknowledgedBy:   r._ack_by ? str(r._ack_by) : "",
+    acknowledgedAt:   r._ack_at ? formatBQDateTime(r._ack_at) : "",
+    patientName:      str(r.PatientName),
+    patientId:        str(r.PatientID),
+    phone:            str(r.PatientPhone1),
+    state:            str(r.FacilityState),
+    facility:         str(r.FacilityName),
+    timeDisplay:      str(r.LocalAppointmentDateTimeFormatted) || formatBQDateTime(r.AppointmentStartDate),
+    insuranceCarrier: str(r.InsuranceCarrier),
+    apptType:         str(r.clean_appt_type) || str(r.AppointmentType),
+    apptStatus:       str(r.AppointmentStatus),
+    apptDate:         formatBQDateTime(r.AppointmentStartDate),
+    createdBy:        str(r.AppointmentCreatedBy),
+    jobTitle:         str(r.JobTittle),
+    loginUser:        str(r.LoginUser),
+    localApptTime:    str(r.LocalAppointmentDateTimeFormatted),
+    listName:         str(r.ListName),
+    attended:         r.Attended != null ? String(r.Attended) : "—",
+  }));
+}
