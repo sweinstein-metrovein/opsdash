@@ -16,7 +16,9 @@ export default function DashboardPage() {
       {/* Right: references + notifications */}
       <div className="w-[300px] min-w-[300px] flex flex-col gap-5">
         <ReferencesCard />
-        <NotificationsCard />
+        <Suspense fallback={<div className="bg-white rounded-xl border border-slate-200 p-4 text-slate-400 text-sm">Loading…</div>}>
+          <NotificationsCard />
+        </Suspense>
       </div>
     </div>
   );
