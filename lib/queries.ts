@@ -466,7 +466,7 @@ export async function getEligibilityDetail(filter: ViewFilter): Promise<DetailRe
 
   const headers = [
     "State", "Clinic", "Patient ID", "Patient First", "Patient Last",
-    "Patient Phone", "Appt Type", "Appt Status", "Appt Start Date",
+    "Patient Phone", "Appt Type", "Appt Status", "Appt Date",
     "Insurance Status", "Insurance Name", "Eligibility Verified Date", "Eligibility Verified By",
   ];
 
@@ -528,7 +528,7 @@ export async function getMissingStatusesDetail(filter: ViewFilter): Promise<Deta
   const headers = [
     "State", "Clinic", "Patient ID", "Patient First", "Patient Last",
     "Patient Phone", "Insurance ID", "Appointment ID",
-    "Appt Type", "Appt Status", "Appt Start Date",
+    "Appt Type", "Appt Status", "Appt Date",
   ];
 
   const formatted = rows.map(r => [
@@ -738,18 +738,14 @@ export async function getMissingDocsDetail(filter: ViewFilter): Promise<DetailRe
     SELECT
       earliest_attended_consult_facility_state,
       earliest_attended_consult_facility,
+      luma_text_link,
       full_name,
       patient_internal_id,
       phone1,
       earliest_attended_consult_date,
       MissingDocumentTypes,
       MissingDocumentCount,
-      DaysOutstanding,
-      DriversLicenseReceived,
-      PrimaryInsuranceReceived,
-      NewPatientIntakeReceived,
-      SecondaryInsuranceReceived,
-      luma_text_link
+      DaysOutstanding
     FROM ${tbl("missing_documents")}
     ${whereClause(filter, { stateField: "earliest_attended_consult_facility_state", sisterField: "SisterFacilityID" })}
     ORDER BY DaysOutstanding DESC
@@ -759,16 +755,15 @@ export async function getMissingDocsDetail(filter: ViewFilter): Promise<DetailRe
   const rows = await runQuery<Record<string, unknown>>(sql);
 
   const headers = [
-    "State", "Clinic", "Patient Name", "Patient ID",
+    "State", "Clinic", "Text Link", "Patient Name", "Patient ID",
     "Phone", "Consult Date", "Missing Doc Types",
     "Missing Count", "Days Outstanding",
-    "DL Received", "Primary Ins Received", "NPI Received", "Secondary Ins Received",
-    "Luma Link",
   ];
 
   const formatted = rows.map(r => [
     str(r.earliest_attended_consult_facility_state),
     str(r.earliest_attended_consult_facility),
+    `Text Link|||${str(r.luma_text_link)}`,  // col 2 - textLink
     str(r.full_name),
     str(r.patient_internal_id),
     str(r.phone1),
@@ -776,18 +771,13 @@ export async function getMissingDocsDetail(filter: ViewFilter): Promise<DetailRe
     str(r.MissingDocumentTypes),
     str(r.MissingDocumentCount),
     str(r.DaysOutstanding),
-    r.DriversLicenseReceived ? "Yes" : "No",
-    r.PrimaryInsuranceReceived ? "Yes" : "No",
-    r.NewPatientIntakeReceived ? "Yes" : "No",
-    r.SecondaryInsuranceReceived ? "Yes" : "No",
-    str(r.luma_text_link),
   ]);
 
   return {
     headers,
     rows: formatted,
     total: rows.length,
-    linkColumns: [13], // luma_text_link → "Edit Link ↗"
+    textLinkColumns: [2],
   };
 }
 
@@ -1071,18 +1061,7 @@ export async function getIncompleteConsentsDetail(filter: ViewFilter): Promise<D
   const cond = filterCondition(filter, "t", { stateField: "state", sisterField: "SisterFacilityID" });
   const sql = `
     SELECT
-      t.UniqueID,
-      t.state,
-      t.FacilityName,
-      t.PatientName,
-      t.PatientID,
-      t.AppointmentStartDate,
-      t.AppointmentRespProvider,
-      t.AppointmentType,
-      t.OverseeingPhysician,
-      t.LumaID,
-      ack.acknowledged_by  AS _ack_by,
-      ack.acknowledged_at  AS _ack_at
+      t.UniqueID, t.state, t.FacilityName, t.LumaID, t.PatientName, t.PatientID, t.AppointmentStartDate, t.AppointmentRespProvider, t.AppointmentType, t.OverseeingPhysician, ack.acknowledged_by AS _ack_by, ack.acknowledged_at AS _ack_at
     FROM ${tbl("incomplete_consents")} t
     LEFT JOIN (
       SELECT row_key, acknowledged_by, acknowledged_at
@@ -1100,29 +1079,107 @@ export async function getIncompleteConsentsDetail(filter: ViewFilter): Promise<D
   const rows = await runQuery<Record<string, unknown>>(sql);
 
   const headers = [
-    "State", "Clinic", "Patient Name", "Patient ID",
+    "State", "Clinic", "Text Link", "Patient Name", "Patient ID",
     "Appt Date", "Provider", "Appt Type",
-    "Overseeing Physician", "Luma ID",
+    "Overseeing Physician",
   ];
 
   const formatted = rows.map(r => [
     str(r.state),
     str(r.FacilityName),
+    `Text Link|||${str(r.LumaID)}`,  // col 2 - textLink
     str(r.PatientName),
     str(r.PatientID),
     formatBQDateTime(r.AppointmentStartDate),
     str(r.AppointmentRespProvider),
     str(r.AppointmentType),
     str(r.OverseeingPhysician),
-    str(r.LumaID),
   ]);
 
   return {
     headers,
     rows: formatted,
     total: rows.length,
+    textLinkColumns: [2],
     acknowledgeConfig: {
       tile:           "incomplete-consents",
+      rowKeys:        rows.map(r => str(r.UniqueID)),
+      isAcknowledged: rows.map(r => r._ack_by != null),
+      acknowledgedBy: rows.map(r => r._ack_by ? str(r._ack_by) : "—"),
+      acknowledgedAt: rows.map(r => r._ack_at ? formatBQDateTime(r._ack_at) : "—"),
+    },
+  };
+}
+
+// ─── TILE 11 — VOICEMAILS ─────────────────────────────────────────────────────
+// SisterFacilityID is STRING in this table — cast for filter.
+
+export async function getVoicemailsCount(filter: ViewFilter): Promise<number> {
+  const cond = filterCondition(filter, "t", {
+    stateField:  "FacilityState",
+    sisterField: "CAST(t.SisterFacilityID AS INT64)",
+  });
+  const sql = `
+    SELECT COUNT(*) AS cnt
+    FROM ${tbl("voicemails")} t
+    LEFT JOIN (
+      SELECT row_key
+      FROM ${tbl("acknowledgments")}
+      WHERE tile_id = 'voicemails' AND revoked_at IS NULL
+    ) ack ON ack.row_key = t.UniqueID
+    WHERE ack.row_key IS NULL AND ${cond}
+  `;
+  const rows = await runQuery<{ cnt: bigint | number }>(sql);
+  return Number(rows[0]?.cnt ?? 0);
+}
+
+export async function getVoicemailsDetail(filter: ViewFilter): Promise<DetailResult> {
+  const cond = filterCondition(filter, "t", {
+    stateField:  "FacilityState",
+    sisterField: "CAST(t.SisterFacilityID AS INT64)",
+  });
+  const sql = `
+    SELECT
+      t.UniqueID, t.FacilityState, t.FacilityName, t.RecordingLink, CONCAT(t.PatientFirst, ' ', t.PatientLast) AS PatientName, t.PatientID, t.PatientPhoneNumber, t.PatientEmail, t.UploadDateTimeEST, ack.acknowledged_by AS _ack_by, ack.acknowledged_at AS _ack_at
+    FROM ${tbl("voicemails")} t
+    LEFT JOIN (
+      SELECT row_key, acknowledged_by, acknowledged_at
+      FROM ${tbl("acknowledgments")}
+      WHERE tile_id = 'voicemails' AND revoked_at IS NULL
+    ) ack ON ack.row_key = t.UniqueID
+    WHERE ${cond}
+    ORDER BY
+      CASE WHEN ack.row_key IS NULL THEN 0 ELSE 1 END ASC,
+      t.UploadDateTimeEST DESC,
+      ack.acknowledged_at ASC NULLS LAST
+    LIMIT 20000
+  `;
+
+  const rows = await runQuery<Record<string, unknown>>(sql);
+
+  const headers = [
+    "State", "Clinic", "Recording", "Patient Name", "Patient ID",
+    "Phone", "Email", "Upload Date/Time",
+  ];
+
+  const formatted = rows.map(r => [
+    str(r.FacilityState),
+    str(r.FacilityName),
+    `Listen|||${str(r.RecordingLink)}`,  // col 2 - textLink
+    str(r.PatientName),
+    str(r.PatientID),
+    str(r.PatientPhoneNumber),
+    str(r.PatientEmail),
+    formatBQDateTime(r.UploadDateTimeEST),
+  ]);
+
+  return {
+    headers,
+    rows: formatted,
+    total: rows.length,
+    textLinkColumns: [2],
+    acknowledgeConfig: {
+      tile:           "voicemails",
       rowKeys:        rows.map(r => str(r.UniqueID)),
       isAcknowledged: rows.map(r => r._ack_by != null),
       acknowledgedBy: rows.map(r => r._ack_by ? str(r._ack_by) : "—"),

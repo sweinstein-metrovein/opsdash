@@ -4,11 +4,10 @@ import {
   getHeldClaimsCount, getMissingOrdersCount, getMissingNpovCount, getAlertsCount,
   getIntakeFormsCount, getEligibilityCount, getMissingStatusesCount,
   getScheduleUpdatesCount, getMissingDocsCount,
+  getFirstTxCallsCount, getVoicemailsCount, getIncompleteConsentsCount,
   getOutstandingPosCount, getMissedCopaysCount, getCopayPctCount, getStockingsCount,
   getCBErrorsCount, getFiveStarsCount,
-  getFirstTxCallsCount, getIncompleteConsentsCount,
 } from "@/lib/queries";
-import { MOCK_TILE_VALUES } from "@/lib/mock-data";
 
 /** Parse filter from URL search params */
 function getFilter(req: NextRequest): ViewFilter {
@@ -39,8 +38,8 @@ export async function GET(req: NextRequest) {
   const [
     heldClaims, missingOrders, missingNpov, alerts,
     intakeForms, eligibility, missingStatuses, scheduleUpdates, missingDocs,
+    firstTxCalls, voicemails, incompleteConsents,
     outstandingPos, missedCopays, copayPct, stockings, cbErrors, fiveStars,
-    firstTxCalls, incompleteConsents,
   ] = await Promise.all([
     safe("held-claims",          () => getHeldClaimsCount(filter)),
     safe("missing-orders",       () => getMissingOrdersCount(filter)),
@@ -51,34 +50,35 @@ export async function GET(req: NextRequest) {
     safe("missing-statuses",     () => getMissingStatusesCount(filter)),
     safe("schedule-updates",     () => getScheduleUpdatesCount(filter)),
     safe("missing-docs",         () => getMissingDocsCount(filter)),
+    safe("first-tx-calls",       () => getFirstTxCallsCount(filter)),
+    safe("voicemails",           () => getVoicemailsCount(filter)),
+    safe("incomplete-consents",  () => getIncompleteConsentsCount(filter)),
     safe("outstanding-pos",      () => getOutstandingPosCount(filter)),
     safe("missed-copays",        () => getMissedCopaysCount(filter)),
     safe("copay-pct",            () => getCopayPctCount(filter)),
     safe("stockings",            () => getStockingsCount(filter)),
     safe("cb-errors",            () => getCBErrorsCount(filter)),
     safe("five-stars",           () => getFiveStarsCount(filter)),
-    safe("first-tx-calls",       () => getFirstTxCallsCount(filter)),
-    safe("incomplete-consents",  () => getIncompleteConsentsCount(filter)),
   ]);
 
   return NextResponse.json({
-    "held-claims":          heldClaims,
-    "missing-orders":       missingOrders,
-    "missing-npov":         missingNpov,
-    "alerts":               alerts,
-    "intake-forms":         intakeForms,
-    "eligibility":          eligibility,
-    "missing-statuses":     missingStatuses,
-    "schedule-updates":     scheduleUpdates,
-    "missing-docs":         missingDocs,
-    "first-tx-calls":       firstTxCalls,
-    "voicemails":           null,
-    "outstanding-pos":      outstandingPos,
-    "incomplete-consents":  incompleteConsents,
-    "cb-errors":            cbErrors,
-    "missed-copays":        missedCopays,
-    "copay-pct":            copayPct,
-    "stockings":            stockings,
-    "five-stars":           fiveStars,
+    "held-claims":         heldClaims,
+    "missing-orders":      missingOrders,
+    "missing-npov":        missingNpov,
+    "alerts":              alerts,
+    "intake-forms":        intakeForms,
+    "eligibility":         eligibility,
+    "missing-statuses":    missingStatuses,
+    "schedule-updates":    scheduleUpdates,
+    "missing-docs":        missingDocs,
+    "first-tx-calls":      firstTxCalls,
+    "voicemails":          voicemails,
+    "outstanding-pos":     outstandingPos,
+    "incomplete-consents": incompleteConsents,
+    "cb-errors":           cbErrors,
+    "missed-copays":       missedCopays,
+    "copay-pct":           copayPct,
+    "stockings":           stockings,
+    "five-stars":          fiveStars,
   });
 }

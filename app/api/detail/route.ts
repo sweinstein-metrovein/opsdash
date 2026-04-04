@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ViewFilter, getHeldClaimsDetail, getMissingOrdersDetail, getMissingNpovDetail, getAlertsDetail, getIntakeFormsDetail, getEligibilityDetail, getMissingStatusesDetail, getScheduleUpdatesDetail, getMissingDocsDetail, getOutstandingPosDetail, getMissedCopaysDetail, getCBErrorsDetail, getFirstTxCallsDetail, getIncompleteConsentsDetail } from "@/lib/queries";
+import { ViewFilter, getHeldClaimsDetail, getMissingOrdersDetail, getMissingNpovDetail, getAlertsDetail, getIntakeFormsDetail, getEligibilityDetail, getMissingStatusesDetail, getScheduleUpdatesDetail, getMissingDocsDetail, getFirstTxCallsDetail, getVoicemailsDetail, getIncompleteConsentsDetail, getOutstandingPosDetail, getMissedCopaysDetail, getCBErrorsDetail } from "@/lib/queries";
 import { MOCK_DRILL_DATA } from "@/lib/mock-data";
 
 function getFilter(req: NextRequest): ViewFilter {
@@ -74,6 +74,10 @@ export async function GET(req: NextRequest) {
     }
     if (tile === "incomplete-consents") {
       const data = await getIncompleteConsentsDetail(filter);
+      return NextResponse.json(data);
+    }
+    if (tile === "voicemails") {
+      const data = await getVoicemailsDetail(filter);
       return NextResponse.json(data);
     }
 

@@ -60,6 +60,8 @@ export default function MetricDetailPage() {
   const [showCompleted, setShowCompleted]           = useState(true);
   const [localAckState, setLocalAckState]           = useState<Record<string, LocalAckEntry>>({});
   const [ackPending, setAckPending]                 = useState<Set<string>>(new Set());
+  const [colWidths, setColWidths] = useState<Record<number, number>>({});
+  const resizeRef = useRef<{ col: number; startX: number; startW: number } | null>(null);
 
   // Export state
   const [exporting, setExporting]     = useState(false);
@@ -182,6 +184,27 @@ export default function MetricDetailPage() {
     else { setSortCol(colIdx); setSortDir("asc"); }
   }
 
+  function onResizeMouseDown(e: React.MouseEvent, colIdx: number) {
+    e.preventDefault();
+    e.stopPropagation();
+    const th = (e.currentTarget as HTMLElement).closest("th") as HTMLTableCellElement;
+    resizeRef.current = { col: colIdx, startX: e.clientX, startW: th.offsetWidth };
+
+    function onMouseMove(ev: MouseEvent) {
+      if (!resizeRef.current) return;
+      const { col, startX, startW } = resizeRef.current;
+      const newW = Math.max(60, startW + ev.clientX - startX);
+      setColWidths(prev => ({ ...prev, [col]: newW }));
+    }
+    function onMouseUp() {
+      resizeRef.current = null;
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    }
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }
+
   // ── Derived ack state helpers (inline to avoid closure issues in useMemo) ──
   // These are called inside useMemo with localAckState/data in deps.
 
@@ -284,6 +307,19 @@ export default function MetricDetailPage() {
                   {search && data && displayRows.length !== data.rows.length
                     ? ` of ${data.rows.length.toLocaleString()} records`
                     : ` record${displayRows.length !== 1 ? "s" : ""}`}
+                  {hasAck && data && (() => {
+                    const cfg = data.acknowledgeConfig!;
+                    const unaddressed = data.rows.filter((_, i) => {
+                      const rk = cfg.rowKeys[i] ?? "";
+                      const local = localAckState[rk];
+                      return local !== undefined ? !local.acked : !(cfg.isAcknowledged[i] ?? false);
+                    }).length;
+                    return (
+                      <span className="ml-2 text-red-500 font-semibold">
+                        · {unaddressed.toLocaleString()} unaddressed
+                      </span>
+                    );
+                  })()}
                   {lastUpdated && (
                     <span className="ml-2 text-slate-400">
                       · Updated {lastUpdated.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
@@ -400,13 +436,28 @@ export default function MetricDetailPage() {
                   {data.headers.map((h, i) => (
                     <th key={h} onClick={() => handleSort(i)}
                         className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap cursor-pointer select-none border-b border-slate-200 hover:text-slate-700 transition-colors"
-                        style={{ background: "#F8FAFC" }}>
+                        style={{
+                          background: "#F8FAFC",
+                          position: "relative",
+                          width: colWidths[i] ?? undefined,
+                          maxWidth: colWidths[i] ? undefined : (data.wideColumns?.includes(i) ? 350 : 200),
+                          minWidth: 60,
+                        }}>
                       <span className="flex items-center gap-1.5">
                         {h}
                         {sortCol === i
                           ? <span className="font-bold" style={{ color: accent }}>{sortDir === "asc" ? "↑" : "↓"}</span>
                           : <span className="text-slate-300 text-[10px]">↕</span>}
                       </span>
+                      {/* Resize handle */}
+                      <div
+                        onMouseDown={e => onResizeMouseDown(e, i)}
+                        onClick={e => e.stopPropagation()}
+                        className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize group"
+                        style={{ zIndex: 1 }}
+                      >
+                        <div className="absolute inset-y-2 right-0 w-0.5 bg-transparent group-hover:bg-slate-300 transition-colors" />
+                      </div>
                     </th>
                   ))}
                 </tr>
@@ -476,17 +527,23 @@ export default function MetricDetailPage() {
                                          : "text-slate-700";
                         return (
                           <td key={ci}
-                              className={`px-4 py-2.5 text-[13px] leading-snug ${cellColor} ${
-                                isWide ? "whitespace-normal min-w-[240px] max-w-[420px]" : "whitespace-nowrap"
-                              }`}>
+                              title={isTextLink ? cell.split("|||")[0] : (isLink ? undefined : cell)}
+                              className={`px-4 py-2.5 text-[13px] leading-snug ${cellColor}`}
+                              style={{
+                                width: colWidths[ci] ?? undefined,
+                                maxWidth: colWidths[ci] ? colWidths[ci] : (isWide ? 350 : 200),
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: isWide ? "normal" : "nowrap",
+                              }}>
                             {isTextLink ? (() => {
                               const [text, url] = cell.split("|||");
                               return url && url !== "–" && url.startsWith("http") ? (
                                 <a href={url} target="_blank" rel="noopener noreferrer"
-                                   className="hover:underline font-medium"
+                                   className="hover:underline font-medium inline-flex items-center gap-1"
                                    style={{ color: highlighted ? "#dc2626" : oranged ? "#c2410c" : "#2563eb" }}
                                    onClick={e => e.stopPropagation()}>
-                                  {text || "—"}
+                                  {text || "—"}<span className="text-[10px] opacity-70">↗</span>
                                 </a>
                               ) : <span>{text || "—"}</span>;
                             })() : isLink ? (
