@@ -53,6 +53,20 @@ function whereClause(
   return "";
 }
 
+/** Returns a bare SQL condition (no WHERE keyword) for use inside JOIN queries with table alias.
+ *  Returns "1=1" if no filter is active. */
+function filterCondition(
+  filter: ViewFilter,
+  alias: string,
+  opts: { stateField?: string; sisterField?: string } = {}
+): string {
+  const sf  = opts.stateField  ?? "facility_state";
+  const sid = opts.sisterField ?? "SisterFacilityID";
+  if (filter.sister !== undefined) return `${alias}.${sid} = ${filter.sister}`;
+  if (filter.state)                return `${alias}.${sf} = '${filter.state}'`;
+  return "1=1";
+}
+
 export interface ViewFilter {
   view?: string;   // "company"
   state?: string;  // e.g. "TX"
@@ -86,6 +100,13 @@ export interface DetailResult {
   wideColumns?: number[];       // column indices that should wrap text
   linkColumns?: number[];       // column indices whose cell value is a URL — rendered as "Edit Link ↗"
   textLinkColumns?: number[];   // column indices where cell = "display text|||url" — rendered as hyperlinked text
+  acknowledgeConfig?: {
+    tile: string;
+    rowKeys: string[];
+    isAcknowledged: boolean[];
+    acknowledgedBy: string[];
+    acknowledgedAt: string[];
+  };
 }
 
 /** Fields that should never appear in any detail view */
@@ -941,5 +962,171 @@ export async function getCBErrorsDetail(filter: ViewFilter): Promise<DetailResul
     rowHighlights,
     textLinkColumns: [2], // FlagType text hyperlinked with EditFormCustomLink url
     wideColumns: [27],    // notes (was 28, shifted -1 after removing Edit column)
+  };
+}
+
+// ─── TILE 10 — FIRST TREATMENT CALLS ─────────────────────────────────────────
+
+export async function getFirstTxCallsCount(filter: ViewFilter): Promise<number> {
+  const cond = filterCondition(filter, "t", { stateField: "state", sisterField: "sisterfacilityid" });
+  const sql = `
+    SELECT COUNT(*) AS cnt
+    FROM ${tbl("first_treatment_calls")} t
+    LEFT JOIN (
+      SELECT row_key
+      FROM ${tbl("acknowledgments")}
+      WHERE tile_id = 'first-tx-calls' AND revoked_at IS NULL
+    ) ack ON ack.row_key = t.UniqueID
+    WHERE ack.row_key IS NULL AND ${cond}
+  `;
+  const rows = await runQuery<{ cnt: bigint | number }>(sql);
+  return Number(rows[0]?.cnt ?? 0);
+}
+
+export async function getFirstTxCallsDetail(filter: ViewFilter): Promise<DetailResult> {
+  const cond = filterCondition(filter, "t", { stateField: "state", sisterField: "sisterfacilityid" });
+  const sql = `
+    SELECT
+      t.UniqueID,
+      t.state,
+      t.FacilityNameProper,
+      CONCAT(t.PatientFirst, ' ', t.PatientLast) AS PatientName,
+      t.PatientID,
+      t.PhoneNumber,
+      t.PhoneNumber2,
+      t.AppointmentStartDate,
+      t.AppointmentType,
+      t.AppointmentRespProvider,
+      t.AppointmentID,
+      ack.acknowledged_by  AS _ack_by,
+      ack.acknowledged_at  AS _ack_at
+    FROM ${tbl("first_treatment_calls")} t
+    LEFT JOIN (
+      SELECT row_key, acknowledged_by, acknowledged_at
+      FROM ${tbl("acknowledgments")}
+      WHERE tile_id = 'first-tx-calls' AND revoked_at IS NULL
+    ) ack ON ack.row_key = t.UniqueID
+    WHERE ${cond}
+    ORDER BY
+      CASE WHEN ack.row_key IS NULL THEN 0 ELSE 1 END ASC,
+      t.AppointmentStartDate ASC,
+      ack.acknowledged_at ASC NULLS LAST
+    LIMIT 20000
+  `;
+
+  const rows = await runQuery<Record<string, unknown>>(sql);
+
+  const headers = [
+    "State", "Clinic", "Patient Name", "Patient ID",
+    "Phone 1", "Phone 2", "Appt Date", "Appt Type",
+    "Provider", "Appt ID",
+  ];
+
+  const formatted = rows.map(r => [
+    str(r.state),
+    str(r.FacilityNameProper),
+    str(r.PatientName),
+    str(r.PatientID),
+    str(r.PhoneNumber),
+    str(r.PhoneNumber2),
+    formatBQDate(r.AppointmentStartDate),
+    str(r.AppointmentType),
+    str(r.AppointmentRespProvider),
+    str(r.AppointmentID),
+  ]);
+
+  return {
+    headers,
+    rows: formatted,
+    total: rows.length,
+    acknowledgeConfig: {
+      tile:           "first-tx-calls",
+      rowKeys:        rows.map(r => str(r.UniqueID)),
+      isAcknowledged: rows.map(r => r._ack_by != null),
+      acknowledgedBy: rows.map(r => r._ack_by ? str(r._ack_by) : "—"),
+      acknowledgedAt: rows.map(r => r._ack_at ? formatBQDateTime(r._ack_at) : "—"),
+    },
+  };
+}
+
+// ─── TILE 13 — INCOMPLETE CONSENTS ───────────────────────────────────────────
+
+export async function getIncompleteConsentsCount(filter: ViewFilter): Promise<number> {
+  const cond = filterCondition(filter, "t", { stateField: "state", sisterField: "SisterFacilityID" });
+  const sql = `
+    SELECT COUNT(*) AS cnt
+    FROM ${tbl("incomplete_consents")} t
+    LEFT JOIN (
+      SELECT row_key
+      FROM ${tbl("acknowledgments")}
+      WHERE tile_id = 'incomplete-consents' AND revoked_at IS NULL
+    ) ack ON ack.row_key = t.UniqueID
+    WHERE ack.row_key IS NULL AND ${cond}
+  `;
+  const rows = await runQuery<{ cnt: bigint | number }>(sql);
+  return Number(rows[0]?.cnt ?? 0);
+}
+
+export async function getIncompleteConsentsDetail(filter: ViewFilter): Promise<DetailResult> {
+  const cond = filterCondition(filter, "t", { stateField: "state", sisterField: "SisterFacilityID" });
+  const sql = `
+    SELECT
+      t.UniqueID,
+      t.state,
+      t.FacilityName,
+      t.PatientName,
+      t.PatientID,
+      t.AppointmentStartDate,
+      t.AppointmentRespProvider,
+      t.AppointmentType,
+      t.OverseeingPhysician,
+      t.LumaID,
+      ack.acknowledged_by  AS _ack_by,
+      ack.acknowledged_at  AS _ack_at
+    FROM ${tbl("incomplete_consents")} t
+    LEFT JOIN (
+      SELECT row_key, acknowledged_by, acknowledged_at
+      FROM ${tbl("acknowledgments")}
+      WHERE tile_id = 'incomplete-consents' AND revoked_at IS NULL
+    ) ack ON ack.row_key = t.UniqueID
+    WHERE ${cond}
+    ORDER BY
+      CASE WHEN ack.row_key IS NULL THEN 0 ELSE 1 END ASC,
+      t.AppointmentStartDate ASC,
+      ack.acknowledged_at ASC NULLS LAST
+    LIMIT 20000
+  `;
+
+  const rows = await runQuery<Record<string, unknown>>(sql);
+
+  const headers = [
+    "State", "Clinic", "Patient Name", "Patient ID",
+    "Appt Date", "Provider", "Appt Type",
+    "Overseeing Physician", "Luma ID",
+  ];
+
+  const formatted = rows.map(r => [
+    str(r.state),
+    str(r.FacilityName),
+    str(r.PatientName),
+    str(r.PatientID),
+    formatBQDateTime(r.AppointmentStartDate),
+    str(r.AppointmentRespProvider),
+    str(r.AppointmentType),
+    str(r.OverseeingPhysician),
+    str(r.LumaID),
+  ]);
+
+  return {
+    headers,
+    rows: formatted,
+    total: rows.length,
+    acknowledgeConfig: {
+      tile:           "incomplete-consents",
+      rowKeys:        rows.map(r => str(r.UniqueID)),
+      isAcknowledged: rows.map(r => r._ack_by != null),
+      acknowledgedBy: rows.map(r => r._ack_by ? str(r._ack_by) : "—"),
+      acknowledgedAt: rows.map(r => r._ack_at ? formatBQDateTime(r._ack_at) : "—"),
+    },
   };
 }

@@ -3,17 +3,33 @@
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useSession } from "next-auth/react";
 import { TILE_MAP } from "@/lib/tiles";
+
+interface AcknowledgeConfig {
+  tile: string;
+  rowKeys: string[];
+  isAcknowledged: boolean[];
+  acknowledgedBy: string[];
+  acknowledgedAt: string[];
+}
 
 interface DetailData {
   headers: string[];
   rows: string[][];
   total: number;
-  rowHighlights?: boolean[];    // red highlight
-  orangeHighlights?: boolean[]; // orange highlight
+  rowHighlights?: boolean[];
+  orangeHighlights?: boolean[];
   wideColumns?: number[];
-  linkColumns?: number[];       // cell value is URL → "Edit Link ↗"
-  textLinkColumns?: number[];   // cell value is "text|||url" → hyperlinked text
+  linkColumns?: number[];
+  textLinkColumns?: number[];
+  acknowledgeConfig?: AcknowledgeConfig;
+}
+
+interface LocalAckEntry {
+  acked: boolean;
+  by?: string;
+  at?: string;
 }
 
 const REFRESH_MS = 60_000;
@@ -26,9 +42,10 @@ const SECTION_ACCENT: Record<string, string> = {
 };
 
 export default function MetricDetailPage() {
-  const { metric } = useParams<{ metric: string }>();
-  const searchParams = useSearchParams();
-  const filterStr = searchParams.toString();
+  const { metric }     = useParams<{ metric: string }>();
+  const searchParams   = useSearchParams();
+  const filterStr      = searchParams.toString();
+  const { data: session } = useSession();
 
   const tile   = TILE_MAP[metric];
   const accent = tile ? (SECTION_ACCENT[tile.section] ?? "#E7373B") : "#E7373B";
@@ -40,6 +57,9 @@ export default function MetricDetailPage() {
   const [search, setSearch]           = useState("");
   const [sortCol, setSortCol]         = useState<number | null>(null);
   const [sortDir, setSortDir]         = useState<"asc" | "desc">("asc");
+  const [showCompleted, setShowCompleted]           = useState(true);
+  const [localAckState, setLocalAckState]           = useState<Record<string, LocalAckEntry>>({});
+  const [ackPending, setAckPending]                 = useState<Set<string>>(new Set());
 
   // Export state
   const [exporting, setExporting]     = useState(false);
@@ -51,7 +71,10 @@ export default function MetricDetailPage() {
   const tableScrollRef = useRef<HTMLDivElement>(null);
   const [tableScrollWidth, setTableScrollWidth] = useState(1);
 
-  // Measure table scroll width whenever data changes
+  // Reset local ack state when filter (state/sister) changes
+  useEffect(() => { setLocalAckState({}); }, [filterStr]);
+
+  // Measure table scroll width for phantom scrollbar
   useEffect(() => {
     if (!tableScrollRef.current) return;
     const el = tableScrollRef.current;
@@ -92,6 +115,40 @@ export default function MetricDetailPage() {
     return () => clearInterval(t);
   }, [fetchData]);
 
+  async function handleAcknowledge(rowKey: string, currentAcked: boolean) {
+    if (ackPending.has(rowKey) || !data?.acknowledgeConfig) return;
+    const newAcked = !currentAcked;
+    const email    = session?.user?.email ?? "You";
+    const timeStr  = new Date().toLocaleString("en-US", {
+      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    });
+
+    // Optimistic update
+    setLocalAckState(prev => ({
+      ...prev,
+      [rowKey]: newAcked ? { acked: true, by: email, at: timeStr } : { acked: false },
+    }));
+    setAckPending(prev => new Set(prev).add(rowKey));
+
+    try {
+      const res = await fetch("/api/acknowledge", {
+        method:  newAcked ? "POST" : "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ tile: data.acknowledgeConfig.tile, rowKey }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch {
+      // Revert on error
+      setLocalAckState(prev => {
+        const next = { ...prev };
+        delete next[rowKey];
+        return next;
+      });
+    } finally {
+      setAckPending(prev => { const n = new Set(prev); n.delete(rowKey); return n; });
+    }
+  }
+
   async function handleExport() {
     setExporting(true);
     setExportError(null);
@@ -100,10 +157,10 @@ export default function MetricDetailPage() {
       const state  = searchParams.get("state")  ?? undefined;
       const sister = searchParams.get("sister") ? Number(searchParams.get("sister")) : undefined;
       const view   = searchParams.get("view")   ?? undefined;
-      const res  = await fetch("/api/export", {
-        method: "POST",
+      const res    = await fetch("/api/export", {
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tile: metric, state, sister, view }),
+        body:    JSON.stringify({ tile: metric, state, sister, view }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -121,49 +178,85 @@ export default function MetricDetailPage() {
   }
 
   function handleSort(colIdx: number) {
-    if (sortCol === colIdx) {
-      setSortDir(d => d === "asc" ? "desc" : "asc");
-    } else {
-      setSortCol(colIdx);
-      setSortDir("asc");
-    }
+    if (sortCol === colIdx) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortCol(colIdx); setSortDir("asc"); }
   }
 
-  // Sort by index so row highlights travel with their rows
+  // ── Derived ack state helpers (inline to avoid closure issues in useMemo) ──
+  // These are called inside useMemo with localAckState/data in deps.
+
   const { displayRows, displayIndices } = useMemo(() => {
     if (!data) return { displayRows: [], displayIndices: [] };
 
+    const cfg = data.acknowledgeConfig;
     let indices = data.rows.map((_, i) => i);
 
+    // Search filter
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       indices = indices.filter(i => data.rows[i].some(cell => cell.toLowerCase().includes(q)));
     }
 
-    if (sortCol !== null) {
-      indices = [...indices].sort((a, b) => {
-        const av = data.rows[a][sortCol] ?? "";
-        const bv = data.rows[b][sortCol] ?? "";
-        const ad = Date.parse(av.replace(" ", "T"));
-        const bd = Date.parse(bv.replace(" ", "T"));
-        if (!isNaN(ad) && !isNaN(bd)) return sortDir === "asc" ? ad - bd : bd - ad;
-        const an = parseFloat(av.replace(/[$,]/g, ""));
-        const bn = parseFloat(bv.replace(/[$,]/g, ""));
-        if (!isNaN(an) && !isNaN(bn)) return sortDir === "asc" ? an - bn : bn - an;
-        return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+    // Hide completed rows
+    if (!showCompleted && cfg) {
+      indices = indices.filter(i => {
+        const rk     = cfg.rowKeys[i] ?? "";
+        const local  = localAckState[rk];
+        const acked  = local !== undefined ? local.acked : (cfg.isAcknowledged[i] ?? false);
+        return !acked;
       });
     }
 
-    return {
-      displayRows:    indices.map(i => data.rows[i]),
-      displayIndices: indices,
+    // Sort
+    const compareRows = (a: number, b: number): number => {
+      const av = data.rows[a][sortCol!] ?? "";
+      const bv = data.rows[b][sortCol!] ?? "";
+      const ad = Date.parse(av.replace(" ", "T"));
+      const bd = Date.parse(bv.replace(" ", "T"));
+      if (!isNaN(ad) && !isNaN(bd)) return sortDir === "asc" ? ad - bd : bd - ad;
+      const an = parseFloat(av.replace(/[$,]/g, ""));
+      const bn = parseFloat(bv.replace(/[$,]/g, ""));
+      if (!isNaN(an) && !isNaN(bn)) return sortDir === "asc" ? an - bn : bn - an;
+      return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
     };
-  }, [data, search, sortCol, sortDir]);
+
+    if (cfg) {
+      // Ack tiles: unacked always first; column sort applied within each group
+      indices = [...indices].sort((a, b) => {
+        const aKey   = cfg.rowKeys[a] ?? "";
+        const bKey   = cfg.rowKeys[b] ?? "";
+        const aLocal = localAckState[aKey];
+        const bLocal = localAckState[bKey];
+        const aAcked = aLocal !== undefined ? aLocal.acked : (cfg.isAcknowledged[a] ?? false);
+        const bAcked = bLocal !== undefined ? bLocal.acked : (cfg.isAcknowledged[b] ?? false);
+        if (aAcked !== bAcked) return aAcked ? 1 : -1;
+        if (sortCol !== null) return compareRows(a, b);
+        return 0; // preserve SQL order within group
+      });
+    } else if (sortCol !== null) {
+      indices = [...indices].sort(compareRows);
+    }
+
+    return { displayRows: indices.map(i => data.rows[i]), displayIndices: indices };
+  }, [data, search, sortCol, sortDir, showCompleted, localAckState]);
+
+  // Count completed for toggle label
+  const completedCount = useMemo(() => {
+    if (!data?.acknowledgeConfig) return 0;
+    const cfg = data.acknowledgeConfig;
+    return data.rows.filter((_, i) => {
+      const rk    = cfg.rowKeys[i] ?? "";
+      const local = localAckState[rk];
+      return local !== undefined ? local.acked : (cfg.isAcknowledged[i] ?? false);
+    }).length;
+  }, [data, localAckState]);
 
   const backParams = new URLSearchParams();
   if (searchParams.get("view"))   backParams.set("view",   searchParams.get("view")!);
   if (searchParams.get("state"))  backParams.set("state",  searchParams.get("state")!);
   if (searchParams.get("sister")) backParams.set("sister", searchParams.get("sister")!);
+
+  const hasAck = !!data?.acknowledgeConfig;
 
   return (
     <div className="max-w-full">
@@ -233,18 +326,35 @@ export default function MetricDetailPage() {
         </div>
       )}
 
-      {/* Search */}
+      {/* Search + Show/Hide Completed toggle */}
       {data && (
-        <div className="mb-4">
+        <div className="mb-4 flex items-center gap-3 flex-wrap">
           <div className="relative max-w-xs">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px] pointer-events-none">🔍</span>
             <input type="text" placeholder="Search all columns…" value={search}
                    onChange={e => setSearch(e.target.value)}
                    className="w-full pl-8 pr-8 py-2 text-[13px] border border-slate-200 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-transparent placeholder:text-slate-400 transition-shadow" />
             {search && (
-              <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-[11px]">✕</button>
+              <button onClick={() => setSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-[11px]">✕</button>
             )}
           </div>
+
+          {hasAck && (
+            <button
+              onClick={() => setShowCompleted(v => !v)}
+              className="inline-flex items-center gap-1.5 text-[12px] font-medium border rounded-lg px-3.5 py-2 transition-all shadow-sm"
+              style={{
+                borderColor: showCompleted ? "#d1d5db" : "#86efac",
+                color:       showCompleted ? "#64748b"  : "#166534",
+                background:  showCompleted ? "white"    : "#f0fdf4",
+              }}
+            >
+              {showCompleted
+                ? <>○ Show All ({completedCount} completed)</>
+                : <>✓ Showing Unaddressed Only — click to show all</>}
+            </button>
+          )}
         </div>
       )}
 
@@ -261,7 +371,7 @@ export default function MetricDetailPage() {
       ) : data ? (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
 
-          {/* ── Phantom scrollbar at TOP ── */}
+          {/* Phantom scrollbar at TOP */}
           <div
             ref={topScrollRef}
             className="overflow-x-auto"
@@ -271,7 +381,7 @@ export default function MetricDetailPage() {
             <div style={{ width: `${tableScrollWidth}px`, height: "1px" }} />
           </div>
 
-          {/* ── Actual table ── */}
+          {/* Actual table */}
           <div
             ref={tableScrollRef}
             className="overflow-x-auto overflow-y-auto"
@@ -283,6 +393,10 @@ export default function MetricDetailPage() {
                 <tr>
                   <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap w-10 border-b border-slate-200"
                       style={{ background: "#F8FAFC" }}>#</th>
+                  {hasAck && (
+                    <th className="px-3 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap w-24 border-b border-slate-200 text-center"
+                        style={{ background: "#F8FAFC" }}>Done</th>
+                  )}
                   {data.headers.map((h, i) => (
                     <th key={h} onClick={() => handleSort(i)}
                         className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap cursor-pointer select-none border-b border-slate-200 hover:text-slate-700 transition-colors"
@@ -300,64 +414,96 @@ export default function MetricDetailPage() {
               <tbody>
                 {displayRows.length === 0 ? (
                   <tr>
-                    <td colSpan={data.headers.length + 1} className="px-4 py-10 text-center text-slate-400 text-[13px]">
+                    <td colSpan={data.headers.length + (hasAck ? 2 : 1)}
+                        className="px-4 py-10 text-center text-slate-400 text-[13px]">
                       {search ? "No records match your search." : "No records found."}
                     </td>
                   </tr>
-                ) : (
-                  displayRows.map((row, ri) => {
-                    // Use original index so highlights travel with their row after sorting
-                    const origIdx    = displayIndices[ri];
-                    const highlighted = data.rowHighlights?.[origIdx]  ?? false;
-                    const oranged     = !highlighted && (data.orangeHighlights?.[origIdx] ?? false);
-                    const isEven = ri % 2 === 0;
-                    const rowBg  = highlighted ? "#FFF5F5"
-                                 : oranged     ? "#FFF7ED"
-                                 : isEven      ? "#ffffff"
-                                 : "#F8FAFC";
-                    return (
-                      <tr key={ri}
-                          className="border-b border-slate-100 last:border-b-0 hover:bg-blue-50/40 transition-colors"
-                          style={{ background: rowBg }}>
-                        <td className="px-4 py-2.5 text-slate-400 text-[11px] tabular-nums font-medium w-10">{ri + 1}</td>
-                        {row.map((cell, ci) => {
-                          const isWide     = data.wideColumns?.includes(ci)     ?? false;
-                          const isLink     = data.linkColumns?.includes(ci)     ?? false;
-                          const isTextLink = data.textLinkColumns?.includes(ci) ?? false;
-                          const cellColor  = highlighted ? "text-red-600 font-medium"
-                                           : oranged     ? "text-orange-700 font-medium"
-                                           : "text-slate-700";
-                          return (
-                            <td key={ci}
-                                className={`px-4 py-2.5 text-[13px] leading-snug ${cellColor} ${
-                                  isWide ? "whitespace-normal min-w-[240px] max-w-[420px]" : "whitespace-nowrap"
-                                }`}>
-                              {isTextLink ? (() => {
-                                const [text, url] = cell.split("|||");
-                                return url && url !== "–" && url.startsWith("http") ? (
-                                  <a href={url} target="_blank" rel="noopener noreferrer"
-                                     className="hover:underline font-medium"
-                                     style={{ color: highlighted ? "#dc2626" : oranged ? "#c2410c" : "#2563eb" }}
-                                     onClick={e => e.stopPropagation()}>
-                                    {text || "—"}
-                                  </a>
-                                ) : <span>{text || "—"}</span>;
-                              })() : isLink ? (
-                                cell && cell !== "–" ? (
-                                  <a href={cell} target="_blank" rel="noopener noreferrer"
-                                     className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline font-medium text-[12px]"
-                                     onClick={e => e.stopPropagation()}>
-                                    Edit Link ↗
-                                  </a>
-                                ) : <span className="text-slate-300">—</span>
-                              ) : cell}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })
-                )}
+                ) : displayRows.map((row, ri) => {
+                  const origIdx = displayIndices[ri];
+                  const cfg     = data.acknowledgeConfig;
+
+                  // Resolve ack state for this row
+                  const rowKey  = cfg ? (cfg.rowKeys[origIdx] ?? "") : "";
+                  const local   = localAckState[rowKey];
+                  const acked   = cfg ? (local !== undefined ? local.acked : (cfg.isAcknowledged[origIdx] ?? false)) : false;
+                  const ackedBy = cfg ? (local?.by ?? (cfg.acknowledgedBy[origIdx] !== "—" ? cfg.acknowledgedBy[origIdx] : undefined)) : undefined;
+                  const ackedAt = cfg ? (local?.at ?? (cfg.acknowledgedAt[origIdx] !== "—" ? cfg.acknowledgedAt[origIdx] : undefined)) : undefined;
+                  const pending = ackPending.has(rowKey);
+
+                  const highlighted = hasAck ? !acked : (data.rowHighlights?.[origIdx] ?? false);
+                  const oranged     = !highlighted && (data.orangeHighlights?.[origIdx] ?? false);
+                  const isEven      = ri % 2 === 0;
+                  const rowBg       = highlighted ? "#FFF5F5"
+                                    : oranged     ? "#FFF7ED"
+                                    : isEven      ? "#ffffff"
+                                    : "#F8FAFC";
+
+                  return (
+                    <tr key={ri}
+                        className="border-b border-slate-100 last:border-b-0 hover:bg-blue-50/40 transition-colors"
+                        style={{ background: rowBg }}>
+                      <td className="px-4 py-2.5 text-slate-400 text-[11px] tabular-nums font-medium w-10">{ri + 1}</td>
+
+                      {hasAck && (
+                        <td className="px-3 py-2 w-24 text-center align-top">
+                          <div className="flex flex-col items-center gap-0.5 pt-0.5">
+                            <input
+                              type="checkbox"
+                              checked={acked}
+                              disabled={pending}
+                              onChange={() => handleAcknowledge(rowKey, acked)}
+                              className="w-4 h-4 cursor-pointer accent-emerald-600 disabled:opacity-40"
+                            />
+                            {acked && ackedBy && (
+                              <span className="text-[9px] text-slate-400 leading-tight text-center max-w-[80px] truncate" title={ackedBy}>
+                                {ackedBy.split("@")[0]}
+                              </span>
+                            )}
+                            {acked && ackedAt && (
+                              <span className="text-[9px] text-slate-400 leading-tight text-center">{ackedAt}</span>
+                            )}
+                          </div>
+                        </td>
+                      )}
+
+                      {row.map((cell, ci) => {
+                        const isWide     = data.wideColumns?.includes(ci)     ?? false;
+                        const isLink     = data.linkColumns?.includes(ci)     ?? false;
+                        const isTextLink = data.textLinkColumns?.includes(ci) ?? false;
+                        const cellColor  = highlighted ? "text-red-600 font-medium"
+                                         : oranged     ? "text-orange-700 font-medium"
+                                         : "text-slate-700";
+                        return (
+                          <td key={ci}
+                              className={`px-4 py-2.5 text-[13px] leading-snug ${cellColor} ${
+                                isWide ? "whitespace-normal min-w-[240px] max-w-[420px]" : "whitespace-nowrap"
+                              }`}>
+                            {isTextLink ? (() => {
+                              const [text, url] = cell.split("|||");
+                              return url && url !== "–" && url.startsWith("http") ? (
+                                <a href={url} target="_blank" rel="noopener noreferrer"
+                                   className="hover:underline font-medium"
+                                   style={{ color: highlighted ? "#dc2626" : oranged ? "#c2410c" : "#2563eb" }}
+                                   onClick={e => e.stopPropagation()}>
+                                  {text || "—"}
+                                </a>
+                              ) : <span>{text || "—"}</span>;
+                            })() : isLink ? (
+                              cell && cell !== "–" ? (
+                                <a href={cell} target="_blank" rel="noopener noreferrer"
+                                   className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline font-medium text-[12px]"
+                                   onClick={e => e.stopPropagation()}>
+                                  Edit Link ↗
+                                </a>
+                              ) : <span className="text-slate-300">—</span>
+                            ) : cell}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
