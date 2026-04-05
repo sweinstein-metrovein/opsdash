@@ -124,8 +124,13 @@ export default function TopBar() {
 
             {/* Page title */}
             <h1
-              className="font-extrabold leading-tight tracking-tight mt-0.5"
-              style={{ fontSize: "19px", color: "#002847", letterSpacing: "-0.02em" }}
+              className="font-bold leading-tight mt-0.5"
+              style={{
+                fontSize: "20px",
+                color: "#002847",
+                letterSpacing: "-0.01em",
+                fontFamily: "var(--font-playfair, 'Playfair Display', Georgia, serif)",
+              }}
             >
               {pageTitle}
             </h1>

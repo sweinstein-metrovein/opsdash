@@ -277,8 +277,8 @@ export default function Sidebar() {
           className="w-full text-left text-[11px] font-medium px-2.5 py-1.5 rounded-lg transition-all"
           style={{ color: "rgba(255,255,255,0.35)" }}
           onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.color      = "#fca5a5";
-            (e.currentTarget as HTMLElement).style.background = "rgba(231,55,59,0.14)";
+            (e.currentTarget as HTMLElement).style.color      = "#E8756A";
+            (e.currentTarget as HTMLElement).style.background = "rgba(232,117,106,0.14)";
           }}
           onMouseLeave={e => {
             (e.currentTarget as HTMLElement).style.color      = "rgba(255,255,255,0.35)";

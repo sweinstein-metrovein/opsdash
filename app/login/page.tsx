@@ -72,7 +72,7 @@ function LoginContent() {
             <div className="flex-1 h-px" style={{ background: "#e2e8f0" }} />
             <span
               className="font-semibold uppercase tracking-[0.2em]"
-              style={{ fontSize: "9.5px", color: "#94a3b8" }}
+              style={{ fontSize: "9.5px", color: "#94a3b8", fontFamily: "var(--font-inter, Inter, sans-serif)" }}
             >
               Operations Dashboard
             </span>
@@ -107,27 +107,28 @@ function LoginContent() {
           {/* Google sign-in button */}
           <button
             onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-            className="w-full flex items-center justify-center gap-3 rounded-xl px-5 py-3 text-[14px] font-semibold transition-all cursor-pointer group"
+            className="w-full flex items-center justify-center gap-3 px-5 py-3 text-[14px] font-semibold cursor-pointer"
             style={{
-              background: "white",
-              border: "1.5px solid #e2e8f0",
-              color: "#1e293b",
-              boxShadow: "0 1px 3px rgba(0,40,71,0.07), 0 1px 2px rgba(0,40,71,0.04)",
+              background: "#E8756A",
+              border: "none",
+              borderRadius: "9999px",
+              color: "#ffffff",
+              boxShadow: "0 4px 16px rgba(232,117,106,0.35), 0 1px 4px rgba(232,117,106,0.2)",
               transition: "all 200ms ease-out",
             }}
             onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 14px rgba(0,40,71,0.12), 0 2px 4px rgba(0,40,71,0.06)";
-              (e.currentTarget as HTMLElement).style.borderColor = "#cbd5e1";
+              (e.currentTarget as HTMLElement).style.background = "#D45F54";
+              (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 20px rgba(232,117,106,0.45), 0 2px 6px rgba(232,117,106,0.25)";
               (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
             }}
             onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 3px rgba(0,40,71,0.07), 0 1px 2px rgba(0,40,71,0.04)";
-              (e.currentTarget as HTMLElement).style.borderColor = "#e2e8f0";
+              (e.currentTarget as HTMLElement).style.background = "#E8756A";
+              (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(232,117,106,0.35), 0 1px 4px rgba(232,117,106,0.2)";
               (e.currentTarget as HTMLElement).style.transform = "";
             }}
           >
-            {/* Google logo */}
-            <svg width="18" height="18" viewBox="0 0 18 18" style={{ flexShrink: 0 }}>
+            {/* Google logo — white version for coral background */}
+            <svg width="18" height="18" viewBox="0 0 18 18" style={{ flexShrink: 0, filter: "brightness(0) invert(1)", opacity: 0.9 }}>
               <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
               <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
               <path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/>

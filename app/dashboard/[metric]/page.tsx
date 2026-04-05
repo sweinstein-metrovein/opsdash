@@ -271,15 +271,25 @@ export default function MetricDetailPage() {
       {/* ── Back link ── */}
       <Link
         href={`/dashboard?${backParams.toString()}`}
-        className="inline-flex items-center gap-1.5 text-[12px] font-medium mb-5 transition-all group rounded-lg px-2.5 py-1.5"
-        style={{ color: "#64748b", background: "rgba(255,255,255,0.7)", border: "1px solid #e2e8f0" }}
+        className="inline-flex items-center gap-1.5 text-[12px] font-semibold mb-5 transition-all"
+        style={{
+          color: "#64748b",
+          background: "rgba(255,255,255,0.7)",
+          border: "1px solid #e2e8f0",
+          borderRadius: "9999px",
+          padding: "7px 16px",
+        }}
         onMouseEnter={e => {
-          (e.currentTarget as HTMLElement).style.color      = "#0f172a";
-          (e.currentTarget as HTMLElement).style.background = "white";
+          (e.currentTarget as HTMLElement).style.color      = "#ffffff";
+          (e.currentTarget as HTMLElement).style.background = "#E8756A";
+          (e.currentTarget as HTMLElement).style.borderColor = "#E8756A";
+          (e.currentTarget as HTMLElement).style.boxShadow  = "0 4px 12px rgba(232,117,106,0.3)";
         }}
         onMouseLeave={e => {
           (e.currentTarget as HTMLElement).style.color      = "#64748b";
           (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.7)";
+          (e.currentTarget as HTMLElement).style.borderColor = "#e2e8f0";
+          (e.currentTarget as HTMLElement).style.boxShadow  = "";
         }}
       >
         <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
@@ -308,8 +318,13 @@ export default function MetricDetailPage() {
 
           <div>
             <h2
-              className="font-extrabold leading-tight"
-              style={{ fontSize: "22px", color: "#0f172a", letterSpacing: "-0.02em" }}
+              className="font-bold leading-tight"
+              style={{
+                fontSize: "22px",
+                color: "#0f172a",
+                letterSpacing: "-0.01em",
+                fontFamily: "var(--font-playfair, 'Playfair Display', Georgia, serif)",
+              }}
             >
               {tile?.label ?? metric}
             </h2>
@@ -358,10 +373,11 @@ export default function MetricDetailPage() {
               href={exportUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-[12px] font-semibold rounded-xl px-3.5 py-2 transition-all"
+              className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3.5 py-2 transition-all"
               style={{
                 color: "#065f46", background: "#ecfdf5",
                 border: "1px solid #a7f3d0",
+                borderRadius: "9999px",
                 boxShadow: "0 1px 2px rgba(5,150,105,0.1)",
               }}
             >
@@ -374,10 +390,11 @@ export default function MetricDetailPage() {
             <button
               onClick={handleExport}
               disabled={exporting || !data}
-              className="inline-flex items-center gap-1.5 text-[12px] font-medium rounded-xl px-3.5 py-2 transition-all disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 text-[12px] font-medium px-3.5 py-2 transition-all disabled:opacity-40"
               style={{
                 color: "#475569", background: "white",
                 border: "1px solid #e2e8f0",
+                borderRadius: "9999px",
                 boxShadow: "0 1px 2px rgba(0,40,71,0.05)",
               }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#f8fafc"}
@@ -399,10 +416,11 @@ export default function MetricDetailPage() {
           <button
             onClick={fetchData}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 text-[12px] font-medium rounded-xl px-3.5 py-2 transition-all disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 text-[12px] font-medium px-3.5 py-2 transition-all disabled:opacity-40"
             style={{
               color: "#475569", background: "white",
               border: "1px solid #e2e8f0",
+              borderRadius: "9999px",
               boxShadow: "0 1px 2px rgba(0,40,71,0.05)",
             }}
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#f8fafc"}
