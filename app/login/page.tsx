@@ -13,7 +13,7 @@ function LoginContent() {
     <div
       className="min-h-screen flex items-center justify-center relative overflow-hidden"
       style={{
-        background: "linear-gradient(145deg, #001e36 0%, #002847 40%, #013462 70%, #002847 100%)",
+        background: "linear-gradient(145deg, #ddf0fa 0%, #eaf6fd 40%, #f2faff 70%, #e8f4fb 100%)",
       }}
     >
       {/* Background decorative circles */}
@@ -21,17 +21,17 @@ function LoginContent() {
         <div style={{
           position: "absolute", top: "-15%", right: "-10%",
           width: "600px", height: "600px", borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(212,241,255,0.06) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(0,40,71,0.06) 0%, transparent 70%)",
         }} />
         <div style={{
           position: "absolute", bottom: "-20%", left: "-10%",
           width: "700px", height: "700px", borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(2,132,199,0.07) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(2,132,199,0.08) 0%, transparent 70%)",
         }} />
         <div style={{
           position: "absolute", top: "30%", left: "15%",
           width: "300px", height: "300px", borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(212,241,255,0.04) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(0,40,71,0.04) 0%, transparent 70%)",
         }} />
       </div>
 
@@ -40,8 +40,8 @@ function LoginContent() {
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(212,241,255,0.025) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(212,241,255,0.025) 1px, transparent 1px)
+            linear-gradient(rgba(0,40,71,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,40,71,0.03) 1px, transparent 1px)
           `,
           backgroundSize: "48px 48px",
         }}
@@ -51,8 +51,8 @@ function LoginContent() {
       <div
         className="relative w-full max-w-[360px] mx-4 rounded-2xl"
         style={{
-          background: "rgba(255,255,255,0.98)",
-          boxShadow: "0 32px 72px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.1)",
+          background: "rgba(255,255,255,0.97)",
+          boxShadow: "0 20px 60px rgba(0,40,71,0.14), 0 6px 20px rgba(0,40,71,0.08), 0 0 0 1px rgba(0,40,71,0.06)",
         }}
       >
         {/* Card top accent */}
@@ -149,7 +149,7 @@ function LoginContent() {
       {/* Bottom version tag */}
       <div
         className="absolute bottom-5 text-center"
-        style={{ fontSize: "10px", color: "rgba(212,241,255,0.2)", letterSpacing: "0.1em" }}
+        style={{ fontSize: "10px", color: "rgba(0,40,71,0.3)", letterSpacing: "0.1em" }}
       >
         METRO VEIN CENTERS · INTERNAL USE ONLY
       </div>

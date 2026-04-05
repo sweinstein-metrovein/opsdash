@@ -319,12 +319,7 @@ export default function MetricDetailPage() {
           <div>
             <h2
               className="font-bold leading-tight"
-              style={{
-                fontSize: "22px",
-                color: "#0f172a",
-                letterSpacing: "-0.01em",
-                fontFamily: "var(--font-playfair, 'Playfair Display', Georgia, serif)",
-              }}
+              style={{ fontSize: "22px", color: "#0f172a", letterSpacing: "-0.01em" }}
             >
               {tile?.label ?? metric}
             </h2>
@@ -438,7 +433,7 @@ export default function MetricDetailPage() {
           className="rounded-xl px-4 py-3 mb-4 flex items-center gap-2 text-[12px] font-medium"
           style={{ background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e" }}
         >
-          <span>⚠</span> {exportError}
+          {exportError}
           <button onClick={() => setExportError(null)} className="ml-auto opacity-60 hover:opacity-100 transition-opacity">✕</button>
         </div>
       )}

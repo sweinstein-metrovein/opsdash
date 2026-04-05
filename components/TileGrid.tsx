@@ -43,6 +43,12 @@ export default function TileGrid() {
     }
   }, [filterStr]);
 
+  // Reset tiles immediately when location changes to prevent stale data flash
+  useEffect(() => {
+    setValues({});
+    setHasLoaded(false);
+  }, [filterStr]);
+
   useEffect(() => { fetchTiles(); }, [fetchTiles]);
   useEffect(() => {
     const timer = setInterval(fetchTiles, REFRESH_INTERVAL_MS);
@@ -67,7 +73,7 @@ export default function TileGrid() {
           )}
           {error && (
             <span className="text-[11px] text-amber-500 flex items-center gap-1">
-              <span>⚠</span> {error}
+              {error}
             </span>
           )}
         </div>

@@ -12,18 +12,18 @@ const STATE_LABELS: Record<string, string> = {
   NJ: "New Jersey", NY: "New York", TX: "Texas",
 };
 
-// ── Dark sidebar design tokens ────────────────────────────────────────────────
+// ── Light sidebar design tokens ───────────────────────────────────────────────
 const S = {
-  activeBg:     "rgba(212,241,255,0.13)",
-  activeBorder: "#d4f1ff",
-  activeText:   "#d4f1ff",
-  inactiveText: "rgba(255,255,255,0.58)",
-  hoverBg:      "rgba(255,255,255,0.07)",
-  hoverText:    "rgba(255,255,255,0.88)",
-  labelText:    "rgba(255,255,255,0.28)",
-  sectionBorder:"rgba(255,255,255,0.07)",
-  dotActive:    "#d4f1ff",
-  dotInactive:  "rgba(255,255,255,0.22)",
+  activeBg:     "rgba(0,40,71,0.07)",
+  activeBorder: "#002847",
+  activeText:   "#002847",
+  inactiveText: "#64748b",
+  hoverBg:      "rgba(0,40,71,0.04)",
+  hoverText:    "#1e293b",
+  labelText:    "#94a3b8",
+  sectionBorder:"#e8eef4",
+  dotActive:    "#002847",
+  dotInactive:  "#cbd5e1",
 };
 
 export default function Sidebar() {
@@ -74,8 +74,8 @@ export default function Sidebar() {
     <nav
       className="w-[240px] min-w-[240px] flex flex-col overflow-y-auto"
       style={{
-        background: "linear-gradient(170deg, #002847 0%, #013462 60%, #002847 100%)",
-        borderRight: "1px solid rgba(255,255,255,0.06)",
+        background: "#ffffff",
+        borderRight: "1px solid #e8eef4",
       }}
     >
       {/* ── Logo ── */}
@@ -83,14 +83,13 @@ export default function Sidebar() {
         <Image
           src="/mvc-logo.png"
           alt="Metro Vein Centers"
-          width={148}
-          height={26}
+          width={172}
+          height={30}
           priority
-          style={{ filter: "brightness(0) invert(1)", opacity: 0.92 }}
         />
         <div
-          className="mt-2 font-semibold tracking-[0.18em] uppercase"
-          style={{ fontSize: "9.5px", color: S.labelText, letterSpacing: "0.16em" }}
+          className="mt-2 font-bold tracking-[0.18em] uppercase"
+          style={{ fontSize: "10px", color: "#002847", letterSpacing: "0.14em", opacity: 0.55 }}
         >
           Operations Dashboard
         </div>
@@ -217,19 +216,19 @@ export default function Sidebar() {
                             style={{
                               borderLeftColor: isGroupActive ? S.activeBorder : "transparent",
                               background:      isGroupActive ? S.activeBg      : "transparent",
-                              color:           isGroupActive ? "#7dd3fc"       : "rgba(255,255,255,0.45)",
+                              color:           isGroupActive ? "#002847"       : "#64748b",
                               fontWeight:      isGroupActive ? 600 : 400,
                             }}
                             onMouseEnter={e => {
                               if (!isGroupActive) {
                                 (e.currentTarget as HTMLElement).style.background = S.hoverBg;
-                                (e.currentTarget as HTMLElement).style.color      = "rgba(255,255,255,0.78)";
+                                (e.currentTarget as HTMLElement).style.color      = "#1e293b";
                               }
                             }}
                             onMouseLeave={e => {
                               if (!isGroupActive) {
                                 (e.currentTarget as HTMLElement).style.background = "transparent";
-                                (e.currentTarget as HTMLElement).style.color      = "rgba(255,255,255,0.45)";
+                                (e.currentTarget as HTMLElement).style.color      = "#64748b";
                               }
                             }}
                           >
@@ -252,7 +251,7 @@ export default function Sidebar() {
 
       {/* ── Admin section ── */}
       {userRole === "admin" && (
-        <div className="pb-3" style={{ borderTop: `1px solid ${S.sectionBorder}` }}>
+        <div className="pb-3" style={{ borderTop: "1px solid #e8eef4" }}>
           <div
             className="font-bold uppercase tracking-widest px-5 pt-3 pb-2"
             style={{ fontSize: "9px", color: S.labelText }}
@@ -273,37 +272,37 @@ export default function Sidebar() {
       )}
 
       {/* ── User footer ── */}
-      <div className="px-4 py-3.5" style={{ borderTop: "1px solid rgba(255,255,255,0.09)" }}>
+      <div className="px-4 py-3.5" style={{ borderTop: "1px solid #e8eef4" }}>
         <div className="flex items-center gap-2.5 mb-3">
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0"
             style={{
               fontSize: "11px",
-              background: "linear-gradient(135deg, rgba(212,241,255,0.25) 0%, rgba(212,241,255,0.12) 100%)",
-              border: "1.5px solid rgba(212,241,255,0.35)",
-              color: S.activeText,
+              background: "rgba(0,40,71,0.08)",
+              border: "1.5px solid rgba(0,40,71,0.14)",
+              color: "#002847",
               letterSpacing: "0.04em",
             }}
           >
             {initials}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="font-semibold truncate" style={{ fontSize: "12px", color: "rgba(255,255,255,0.88)" }}>
+            <div className="font-semibold truncate" style={{ fontSize: "12px", color: "#1e293b" }}>
               {displayName}
             </div>
-            <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.38)" }}>{roleLabel}</div>
+            <div style={{ fontSize: "10px", color: "#94a3b8" }}>{roleLabel}</div>
           </div>
         </div>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
           className="w-full text-left text-[11px] font-medium px-2.5 py-1.5 rounded-lg transition-all"
-          style={{ color: "rgba(255,255,255,0.35)" }}
+          style={{ color: "#94a3b8" }}
           onMouseEnter={e => {
             (e.currentTarget as HTMLElement).style.color      = "#E8756A";
-            (e.currentTarget as HTMLElement).style.background = "rgba(232,117,106,0.14)";
+            (e.currentTarget as HTMLElement).style.background = "rgba(232,117,106,0.10)";
           }}
           onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.color      = "rgba(255,255,255,0.35)";
+            (e.currentTarget as HTMLElement).style.color      = "#94a3b8";
             (e.currentTarget as HTMLElement).style.background = "transparent";
           }}
         >
@@ -325,21 +324,21 @@ function NavItem({
       href={href}
       className="flex items-center gap-2.5 px-4 py-2 text-[13px] border-l-[3px] transition-all"
       style={{
-        borderLeftColor: isActive ? "#d4f1ff" : "transparent",
-        background:      isActive ? "rgba(212,241,255,0.13)" : "transparent",
-        color:           isActive ? "#d4f1ff" : "rgba(255,255,255,0.58)",
+        borderLeftColor: isActive ? "#002847" : "transparent",
+        background:      isActive ? "rgba(0,40,71,0.07)" : "transparent",
+        color:           isActive ? "#002847" : "#64748b",
         fontWeight:      isActive ? 600 : 400,
       }}
       onMouseEnter={e => {
         if (!isActive) {
-          (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.07)";
-          (e.currentTarget as HTMLElement).style.color      = "rgba(255,255,255,0.88)";
+          (e.currentTarget as HTMLElement).style.background = "rgba(0,40,71,0.04)";
+          (e.currentTarget as HTMLElement).style.color      = "#1e293b";
         }
       }}
       onMouseLeave={e => {
         if (!isActive) {
           (e.currentTarget as HTMLElement).style.background = "transparent";
-          (e.currentTarget as HTMLElement).style.color      = "rgba(255,255,255,0.58)";
+          (e.currentTarget as HTMLElement).style.color      = "#64748b";
         }
       }}
     >
@@ -347,7 +346,7 @@ function NavItem({
       {showDot && (
         <span
           className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-          style={{ background: isActive ? "#d4f1ff" : "rgba(255,255,255,0.3)" }}
+          style={{ background: isActive ? "#002847" : "#cbd5e1" }}
         />
       )}
       {label}

@@ -61,7 +61,7 @@ export default function TopBar() {
         }}
       />
 
-      <div className="relative px-7 flex items-center justify-between" style={{ height: "66px" }}>
+      <div className="relative px-7 flex items-center justify-between" style={{ height: "76px" }}>
 
         {/* ── Left: back + breadcrumb + title ── */}
         <div className="flex items-center gap-3">
@@ -125,12 +125,7 @@ export default function TopBar() {
             {/* Page title */}
             <h1
               className="font-bold leading-tight mt-0.5"
-              style={{
-                fontSize: "20px",
-                color: "#002847",
-                letterSpacing: "-0.01em",
-                fontFamily: "var(--font-playfair, 'Playfair Display', Georgia, serif)",
-              }}
+              style={{ fontSize: "21px", color: "#002847", letterSpacing: "-0.01em" }}
             >
               {pageTitle}
             </h1>

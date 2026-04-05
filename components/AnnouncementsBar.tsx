@@ -73,10 +73,10 @@ function AnnouncementModal({
             <div className="flex items-center gap-2 flex-wrap">
               {item.priority === "urgent" && (
                 <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
                   style={{ background: p.badge, color: p.text }}
                 >
-                  ⚠ Urgent
+                  Urgent
                 </span>
               )}
               <span
@@ -86,7 +86,12 @@ function AnnouncementModal({
                 {item.dept}
               </span>
               {item.isPinned && (
-                <span className="text-[11px] font-medium" style={{ color: "#94a3b8" }}>📌 Pinned</span>
+                <span
+                  className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
+                  style={{ background: "rgba(0,40,71,0.07)", color: "#475569" }}
+                >
+                  Pinned
+                </span>
               )}
             </div>
             <button
@@ -104,11 +109,7 @@ function AnnouncementModal({
 
           <h2
             className="font-bold leading-snug"
-            style={{
-              fontSize: "18px",
-              color: "#0f172a",
-              fontFamily: "var(--font-playfair, 'Playfair Display', Georgia, serif)",
-            }}
+            style={{ fontSize: "18px", color: "#0f172a" }}
           >
             {item.title}
           </h2>
@@ -195,9 +196,6 @@ export default function AnnouncementsBar() {
           className="flex items-center gap-2 px-4 py-2.5"
           style={{ borderBottom: "1px solid #f1f5f9", background: "#fafbfc" }}
         >
-          <svg width="13" height="13" viewBox="0 0 20 20" fill="none" style={{ color: "#002847", flexShrink: 0 }}>
-            <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z" fill="currentColor"/>
-          </svg>
           <span
             className="font-bold uppercase tracking-widest"
             style={{ fontSize: "9.5px", color: "#002847" }}
@@ -235,7 +233,12 @@ export default function AnnouncementsBar() {
                 {/* Badges */}
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   {item.isPinned && (
-                    <span style={{ fontSize: "11px" }}>📌</span>
+                    <span
+                      className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider"
+                      style={{ background: "rgba(0,40,71,0.07)", color: "#475569" }}
+                    >
+                      Pinned
+                    </span>
                   )}
                   {item.priority === "urgent" && (
                     <span

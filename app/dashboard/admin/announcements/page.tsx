@@ -150,7 +150,7 @@ function FormPanel({
       >
         <h3
           className="font-bold"
-          style={{ fontSize: "16px", color: "#0f172a", fontFamily: "var(--font-playfair, 'Playfair Display', Georgia, serif)" }}
+          style={{ fontSize: "16px", color: "#0f172a" }}
         >
           {editingId ? "Edit Announcement" : "New Announcement"}
         </h3>
@@ -517,10 +517,7 @@ export default function AnnouncementsAdminPage() {
         <div>
           <h1
             className="font-bold leading-tight"
-            style={{
-              fontSize: "24px", color: "#0f172a",
-              fontFamily: "var(--font-playfair, 'Playfair Display', Georgia, serif)",
-            }}
+            style={{ fontSize: "24px", color: "#0f172a" }}
           >
             Announcements
           </h1>
@@ -552,7 +549,7 @@ export default function AnnouncementsAdminPage() {
           className="rounded-xl px-4 py-3 mb-4 flex items-center gap-2 text-[12px] font-medium"
           style={{ background: "#fff5f4", border: "1px solid rgba(232,117,106,0.3)", color: "#c44f45" }}
         >
-          ⚠ {error}
+          {error}
           <button onClick={() => setError(null)} className="ml-auto opacity-60 hover:opacity-100">✕</button>
         </div>
       )}
@@ -648,7 +645,14 @@ export default function AnnouncementsAdminPage() {
                   >
                     <td className="px-4 py-3" style={{ maxWidth: "260px" }}>
                       <div className="font-medium truncate" style={{ fontSize: "13px", color: "#0f172a" }}>
-                        {a.isPinned && <span className="mr-1 text-[11px]">📌</span>}
+                        {a.isPinned && (
+                          <span
+                            className="mr-1.5 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider align-middle"
+                            style={{ background: "rgba(0,40,71,0.07)", color: "#64748b" }}
+                          >
+                            PIN
+                          </span>
+                        )}
                         {a.title}
                       </div>
                       {a.body && (
