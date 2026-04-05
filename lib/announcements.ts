@@ -4,9 +4,13 @@ const PROJECT = process.env.BIGQUERY_PROJECT_ID!;
 const DATASET  = process.env.BIGQUERY_DATASET!;
 const TBL      = `\`${PROJECT}.${DATASET}.announcements\``;
 
-/** Escape single quotes for BigQuery string literals */
+/** Escape characters for BigQuery string literals */
 function safe(s: string): string {
-  return String(s ?? "").replace(/'/g, "''");
+  return String(s ?? "")
+    .replace(/\\/g, "\\\\")   // backslashes first
+    .replace(/'/g, "\\'")     // single quotes
+    .replace(/\n/g, "\\n")    // newlines
+    .replace(/\r/g, "\\r");   // carriage returns
 }
 
 /** Format ISO datetime string for BigQuery TIMESTAMP, or return NULL */

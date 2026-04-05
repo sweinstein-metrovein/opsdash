@@ -319,26 +319,42 @@ function FormPanel({
         </div>
 
         {/* Toggles */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-8">
           {[
-            { key: "isActive" as const, label: "Publish immediately", sub: "Toggle off to save as draft" },
+            { key: "isActive" as const, label: "Publish immediately", sub: "Off = save as draft" },
             { key: "isPinned" as const, label: "Pin to top",          sub: "Pinned items appear first" },
           ].map(t => (
-            <label key={t.key} className="flex items-center gap-3 cursor-pointer select-none">
+            <div key={t.key} className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setForm(f => ({ ...f, [t.key]: !f[t.key] }))}
-                className="relative w-10 h-5.5 rounded-full transition-colors flex-shrink-0"
+                aria-checked={form[t.key]}
+                role="switch"
                 style={{
+                  position: "relative",
+                  flexShrink: 0,
+                  width: "40px",
+                  height: "22px",
+                  borderRadius: "9999px",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
                   background: form[t.key] ? "#002847" : "#cbd5e1",
-                  width: "40px", height: "22px",
+                  transition: "background 200ms ease-out",
                 }}
               >
                 <span
-                  className="absolute top-0.5 rounded-full bg-white shadow transition-transform"
                   style={{
-                    width: "18px", height: "18px",
-                    transform: form[t.key] ? "translateX(19px)" : "translateX(2px)",
+                    position: "absolute",
+                    top: "2px",
+                    left: "2px",
+                    width: "18px",
+                    height: "18px",
+                    borderRadius: "50%",
+                    background: "white",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                    transition: "transform 200ms ease-out",
+                    transform: form[t.key] ? "translateX(18px)" : "translateX(0px)",
                   }}
                 />
               </button>
@@ -346,7 +362,7 @@ function FormPanel({
                 <div style={{ fontSize: "13px", fontWeight: 500, color: "#374151" }}>{t.label}</div>
                 <div style={{ fontSize: "11px", color: "#94a3b8" }}>{t.sub}</div>
               </div>
-            </label>
+            </div>
           ))}
         </div>
 
