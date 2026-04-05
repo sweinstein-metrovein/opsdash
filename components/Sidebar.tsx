@@ -1,9 +1,9 @@
 "use client";
 
+import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { STATES, getSisterGroups } from "@/lib/facilities";
 
@@ -250,6 +250,28 @@ export default function Sidebar() {
         )}
       </div>
 
+      {/* ── Admin section ── */}
+      {userRole === "admin" && (
+        <div className="pb-3" style={{ borderTop: `1px solid ${S.sectionBorder}` }}>
+          <div
+            className="font-bold uppercase tracking-widest px-5 pt-3 pb-2"
+            style={{ fontSize: "9px", color: S.labelText }}
+          >
+            Admin
+          </div>
+          <NavItem
+            href="/dashboard/admin/announcements"
+            isActive={false}
+            label="Announcements"
+            icon={
+              <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor" style={{ flexShrink: 0, opacity: 0.7 }}>
+                <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/>
+              </svg>
+            }
+          />
+        </div>
+      )}
+
       {/* ── User footer ── */}
       <div className="px-4 py-3.5" style={{ borderTop: "1px solid rgba(255,255,255,0.09)" }}>
         <div className="flex items-center gap-2.5 mb-3">
@@ -294,9 +316,9 @@ export default function Sidebar() {
 
 // ── Reusable nav item ──────────────────────────────────────────────────────────
 function NavItem({
-  href, isActive, label, showDot,
+  href, isActive, label, showDot, icon,
 }: {
-  href: string; isActive: boolean; label: string; showDot?: boolean;
+  href: string; isActive: boolean; label: string; showDot?: boolean; icon?: React.ReactNode;
 }) {
   return (
     <Link
@@ -321,6 +343,7 @@ function NavItem({
         }
       }}
     >
+      {icon}
       {showDot && (
         <span
           className="w-1.5 h-1.5 rounded-full flex-shrink-0"
