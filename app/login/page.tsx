@@ -10,51 +10,147 @@ function LoginContent() {
   const error = searchParams.get("error");
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
-      <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-sm text-center">
-        {/* Logo */}
-        <div className="flex justify-center mb-2">
-          <Image src="/mvc-logo.png" alt="Metro Vein Centers" width={200} height={36} priority />
+    <div
+      className="min-h-screen flex items-center justify-center relative overflow-hidden"
+      style={{
+        background: "linear-gradient(145deg, #001e36 0%, #002847 40%, #013462 70%, #002847 100%)",
+      }}
+    >
+      {/* Background decorative circles */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div style={{
+          position: "absolute", top: "-15%", right: "-10%",
+          width: "600px", height: "600px", borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(212,241,255,0.06) 0%, transparent 70%)",
+        }} />
+        <div style={{
+          position: "absolute", bottom: "-20%", left: "-10%",
+          width: "700px", height: "700px", borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(2,132,199,0.07) 0%, transparent 70%)",
+        }} />
+        <div style={{
+          position: "absolute", top: "30%", left: "15%",
+          width: "300px", height: "300px", borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(212,241,255,0.04) 0%, transparent 70%)",
+        }} />
+      </div>
+
+      {/* Grid pattern overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(212,241,255,0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(212,241,255,0.025) 1px, transparent 1px)
+          `,
+          backgroundSize: "48px 48px",
+        }}
+      />
+
+      {/* Login card */}
+      <div
+        className="relative w-full max-w-[360px] mx-4 rounded-2xl"
+        style={{
+          background: "rgba(255,255,255,0.98)",
+          boxShadow: "0 32px 72px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.1)",
+        }}
+      >
+        {/* Card top accent */}
+        <div
+          className="absolute top-0 left-0 right-0 rounded-t-2xl"
+          style={{ height: "3px", background: "linear-gradient(90deg, #002847 0%, #0284C7 50%, #d4f1ff 100%)" }}
+        />
+
+        <div className="px-9 pt-9 pb-8">
+          {/* Logo */}
+          <div className="flex justify-center mb-1">
+            <Image src="/mvc-logo.png" alt="Metro Vein Centers" width={190} height={34} priority />
+          </div>
+
+          {/* Tagline */}
+          <div className="flex items-center justify-center gap-2 mb-8 mt-3">
+            <div className="flex-1 h-px" style={{ background: "#e2e8f0" }} />
+            <span
+              className="font-semibold uppercase tracking-[0.2em]"
+              style={{ fontSize: "9.5px", color: "#94a3b8" }}
+            >
+              Operations Dashboard
+            </span>
+            <div className="flex-1 h-px" style={{ background: "#e2e8f0" }} />
+          </div>
+
+          {/* Error messages */}
+          {error === "AccessDenied" && (
+            <div
+              className="mb-5 rounded-xl px-4 py-3"
+              style={{ background: "#fef2f2", border: "1px solid #fecaca" }}
+            >
+              <p className="text-[13px] font-semibold mb-0.5" style={{ color: "#b91c1c" }}>Access Denied</p>
+              <p className="text-[12px]" style={{ color: "#dc2626" }}>
+                Your account is not set up for access. Contact your administrator.
+              </p>
+            </div>
+          )}
+
+          {error && error !== "AccessDenied" && (
+            <div
+              className="mb-5 rounded-xl px-4 py-3"
+              style={{ background: "#fffbeb", border: "1px solid #fde68a" }}
+            >
+              <p className="text-[13px] font-semibold mb-0.5" style={{ color: "#92400e" }}>Sign-in Error</p>
+              <p className="text-[12px]" style={{ color: "#b45309" }}>
+                Something went wrong. Please try again or contact your administrator.
+              </p>
+            </div>
+          )}
+
+          {/* Google sign-in button */}
+          <button
+            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+            className="w-full flex items-center justify-center gap-3 rounded-xl px-5 py-3 text-[14px] font-semibold transition-all cursor-pointer group"
+            style={{
+              background: "white",
+              border: "1.5px solid #e2e8f0",
+              color: "#1e293b",
+              boxShadow: "0 1px 3px rgba(0,40,71,0.07), 0 1px 2px rgba(0,40,71,0.04)",
+              transition: "all 200ms ease-out",
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 14px rgba(0,40,71,0.12), 0 2px 4px rgba(0,40,71,0.06)";
+              (e.currentTarget as HTMLElement).style.borderColor = "#cbd5e1";
+              (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 3px rgba(0,40,71,0.07), 0 1px 2px rgba(0,40,71,0.04)";
+              (e.currentTarget as HTMLElement).style.borderColor = "#e2e8f0";
+              (e.currentTarget as HTMLElement).style.transform = "";
+            }}
+          >
+            {/* Google logo */}
+            <svg width="18" height="18" viewBox="0 0 18 18" style={{ flexShrink: 0 }}>
+              <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+              <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+              <path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/>
+              <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          {/* Footer note */}
+          <p className="text-center mt-5 text-[11px]" style={{ color: "#94a3b8" }}>
+            Sign in with your{" "}
+            <span className="font-semibold" style={{ color: "#64748b" }}>@metroveincenters.com</span>
+            {" "}account
+          </p>
         </div>
-        <p className="text-[12px] text-slate-400 mb-8 tracking-widest uppercase">
-          Operations Dashboard
-        </p>
+      </div>
 
-        {/* Error message */}
-        {error === "AccessDenied" && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-left">
-            <p className="text-[13px] font-semibold text-red-700 mb-0.5">Access Denied</p>
-            <p className="text-[12px] text-red-600">
-              Your account is not set up for access yet. Contact your administrator to be added.
-            </p>
-          </div>
-        )}
-
-        {error && error !== "AccessDenied" && (
-          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
-            <p className="text-[13px] font-semibold text-amber-700 mb-0.5">Sign-in Error</p>
-            <p className="text-[12px] text-amber-600">
-              Something went wrong. Please try again or contact your administrator.
-            </p>
-          </div>
-        )}
-
-        <button
-          onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-          className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-200 rounded-xl px-5 py-3 text-[14px] font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer"
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18">
-            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-            <path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/>
-            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
-          </svg>
-          Sign in with Google
-        </button>
-
-        <p className="text-[11px] text-slate-400 mt-5">
-          Use your @metroveincenters.com account
-        </p>
+      {/* Bottom version tag */}
+      <div
+        className="absolute bottom-5 text-center"
+        style={{ fontSize: "10px", color: "rgba(212,241,255,0.2)", letterSpacing: "0.1em" }}
+      >
+        METRO VEIN CENTERS · INTERNAL USE ONLY
       </div>
     </div>
   );

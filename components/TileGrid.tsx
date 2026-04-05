@@ -6,17 +6,24 @@ import { TILES, SECTIONS, TileSection } from "@/lib/tiles";
 import MetricTile from "./MetricTile";
 
 const SECTION_ORDER: TileSection[] = ["billing", "scheduling", "followup", "collections"];
-const REFRESH_INTERVAL_MS = 60_000; // 60 seconds
+const REFRESH_INTERVAL_MS = 60_000;
+
+const SECTION_CONFIG: Record<TileSection, { accent: string; bg: string; text: string; icon: string }> = {
+  billing:     { accent: "#E7373B", bg: "rgba(254,242,242,1)",   text: "#B91C1C", icon: "●" },
+  scheduling:  { accent: "#0284C7", bg: "rgba(240,249,255,1)",   text: "#0369A1", icon: "●" },
+  followup:    { accent: "#7C3AED", bg: "rgba(245,243,255,1)",   text: "#6D28D9", icon: "●" },
+  collections: { accent: "#059669", bg: "rgba(236,253,245,1)",   text: "#047857", icon: "●" },
+};
 
 export default function TileGrid() {
   const searchParams = useSearchParams();
-  const filterStr = searchParams.toString(); // re-fetch when filter changes
+  const filterStr    = searchParams.toString();
 
-  const [values, setValues]       = useState<Record<string, number | null>>({});
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [values, setValues]           = useState<Record<string, number | null>>({});
+  const [hasLoaded, setHasLoaded]     = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState<string | null>(null);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState<string | null>(null);
 
   const fetchTiles = useCallback(async () => {
     setLoading(true);
@@ -36,12 +43,7 @@ export default function TileGrid() {
     }
   }, [filterStr]);
 
-  // Fetch on mount and whenever filter changes
-  useEffect(() => {
-    fetchTiles();
-  }, [fetchTiles]);
-
-  // Auto-refresh every 60 seconds
+  useEffect(() => { fetchTiles(); }, [fetchTiles]);
   useEffect(() => {
     const timer = setInterval(fetchTiles, REFRESH_INTERVAL_MS);
     return () => clearInterval(timer);
@@ -49,11 +51,11 @@ export default function TileGrid() {
 
   return (
     <div className="flex flex-col gap-1">
-      {/* Status bar */}
-      <div className="flex items-center justify-between mb-2">
+      {/* ── Status bar ── */}
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           {loading && (
-            <span className="text-[11px] text-slate-400 flex items-center gap-1">
+            <span className="text-[11px] text-slate-400 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
               Refreshing…
             </span>
@@ -64,35 +66,45 @@ export default function TileGrid() {
             </span>
           )}
           {error && (
-            <span className="text-[11px] text-amber-500">{error}</span>
+            <span className="text-[11px] text-amber-500 flex items-center gap-1">
+              <span>⚠</span> {error}
+            </span>
           )}
         </div>
         <button
           onClick={fetchTiles}
           disabled={loading}
-          className="text-[11px] text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-40 flex items-center gap-1"
+          className="text-[11px] font-medium text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-40 flex items-center gap-1 px-2 py-1 rounded-md hover:bg-white"
+          style={{ transition: "all 150ms ease-out" }}
         >
-          ↻ Refresh
+          <span className={loading ? "animate-spin inline-block" : ""} style={{ fontSize: "12px" }}>↻</span>
+          Refresh
         </button>
       </div>
 
-      {/* Tile sections */}
+      {/* ── Sections ── */}
       {SECTION_ORDER.map(section => {
         const tiles = TILES.filter(t => t.section === section);
-        const sectionAccent: Record<string, string> = {
-          billing:     "#E7373B",
-          scheduling:  "#0284C7",
-          followup:    "#7C3AED",
-          collections: "#059669",
-        };
+        const cfg   = SECTION_CONFIG[section];
+
         return (
           <div key={section} className="mb-5">
+            {/* Section header */}
             <div className="flex items-center gap-2.5 mb-3">
-              <div className="w-1 h-4 rounded-full" style={{ background: sectionAccent[section] }} />
-              <div className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                style={{ background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.accent}22` }}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: cfg.accent }}
+                />
                 {SECTIONS[section]}
-              </div>
+              </span>
+              <div className="flex-1 h-px" style={{ background: "rgba(0,40,71,0.06)" }} />
             </div>
+
+            {/* Tile grid */}
             <div
               className="grid gap-3"
               style={{ gridTemplateColumns: `repeat(${Math.min(tiles.length, 5)}, minmax(0, 1fr))` }}

@@ -12,9 +12,19 @@ const STATE_LABELS: Record<string, string> = {
   NJ: "New Jersey", NY: "New York", TX: "Texas",
 };
 
-const BRAND_BLUE  = "#d4f1ff";
-const ACTIVE_TEXT = "#0369A1";
-const ACTIVE_BG   = "#EFF9FF";
+// ── Dark sidebar design tokens ────────────────────────────────────────────────
+const S = {
+  activeBg:     "rgba(212,241,255,0.13)",
+  activeBorder: "#d4f1ff",
+  activeText:   "#d4f1ff",
+  inactiveText: "rgba(255,255,255,0.58)",
+  hoverBg:      "rgba(255,255,255,0.07)",
+  hoverText:    "rgba(255,255,255,0.88)",
+  labelText:    "rgba(255,255,255,0.28)",
+  sectionBorder:"rgba(255,255,255,0.07)",
+  dotActive:    "#d4f1ff",
+  dotInactive:  "rgba(255,255,255,0.22)",
+};
 
 export default function Sidebar() {
   const router       = useRouter();
@@ -46,17 +56,11 @@ export default function Sidebar() {
     });
   }
 
-  // ── Initials for avatar ─────────────────────────────────────────────────
   const displayName = session?.userName ?? session?.user?.name ?? "Staff";
   const initials    = displayName.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
-  const roleLabel   = userRole === "admin" ? "Admin"
+  const roleLabel   = userRole === "admin" ? "Administrator"
                     : userRole === "regional" ? `Regional · ${userState}`
                     : "Clinic Staff";
-
-  // ── What to render in the nav area, based on role ───────────────────────
-  // Admin    : all states + sister groups + company-wide link
-  // Regional : only their state + its sister groups (no "all clinics" link)
-  // Sister   : only their single sister group, no state header at all
 
   const visibleStates = userRole === "admin"
     ? STATES
@@ -69,13 +73,25 @@ export default function Sidebar() {
   return (
     <nav
       className="w-[240px] min-w-[240px] flex flex-col overflow-y-auto"
-      style={{ background: "#ffffff", borderRight: "1px solid #e2e8f0" }}
+      style={{
+        background: "linear-gradient(170deg, #002847 0%, #013462 60%, #002847 100%)",
+        borderRight: "1px solid rgba(255,255,255,0.06)",
+      }}
     >
       {/* ── Logo ── */}
-      <div className="px-5 py-5" style={{ borderBottom: "1px solid #e2e8f0" }}>
-        <Image src="/mvc-logo.png" alt="Metro Vein Centers" width={160} height={28} priority />
-        <div className="mt-1.5 font-semibold tracking-widest uppercase"
-             style={{ fontSize: "10px", color: "#94a3b8" }}>
+      <div className="px-5 pt-5 pb-4" style={{ borderBottom: `1px solid ${S.sectionBorder}` }}>
+        <Image
+          src="/mvc-logo.png"
+          alt="Metro Vein Centers"
+          width={148}
+          height={26}
+          priority
+          style={{ filter: "brightness(0) invert(1)", opacity: 0.92 }}
+        />
+        <div
+          className="mt-2 font-semibold tracking-[0.18em] uppercase"
+          style={{ fontSize: "9.5px", color: S.labelText, letterSpacing: "0.16em" }}
+        >
           Operations Dashboard
         </div>
       </div>
@@ -83,30 +99,27 @@ export default function Sidebar() {
       {/* ── Company-wide link (admins only) ── */}
       {userRole === "admin" && (
         <div className="pt-4 pb-1">
-          <div className="font-semibold uppercase tracking-widest px-5 pb-2"
-               style={{ fontSize: "10px", color: "#94a3b8" }}>
+          <div
+            className="font-bold uppercase tracking-widest px-5 pb-2"
+            style={{ fontSize: "9px", color: S.labelText }}
+          >
             Company
           </div>
-          <Link
+          <NavItem
             href="/dashboard?view=company"
-            className="flex items-center gap-2 px-5 py-2 text-[13px] border-l-[3px] transition-all"
-            style={activeView === "company"
-              ? { background: ACTIVE_BG, color: ACTIVE_TEXT, borderLeftColor: BRAND_BLUE, fontWeight: 600 }
-              : { color: "#64748b", borderLeftColor: "transparent" }}
-          >
-            MVC Company-Wide
-          </Link>
+            isActive={activeView === "company"}
+            label="MVC Company-Wide"
+          />
         </div>
       )}
 
       {/* ── Navigation ── */}
       <div className="flex-1 pb-4">
 
-        {/* Sister-level: no state header, just their single group */}
         {userRole === "sister" && userSister !== null ? (
           <>
-            <div className="font-semibold uppercase tracking-widest px-5 pt-4 pb-2"
-                 style={{ fontSize: "10px", color: "#94a3b8" }}>
+            <div className="font-bold uppercase tracking-widest px-5 pt-4 pb-2"
+                 style={{ fontSize: "9px", color: S.labelText }}>
               My Clinic
             </div>
             {visibleStates.map(state =>
@@ -115,29 +128,29 @@ export default function Sidebar() {
                 .map(group => {
                   const label = group.facNameCombined.replace(/MVC /g, "").trim();
                   return (
-                    <Link
+                    <NavItem
                       key={group.sisterFacilityId}
                       href={`/dashboard?state=${state}&sister=${group.sisterFacilityId}`}
-                      className="flex items-center gap-2 px-5 py-2 text-[13px] border-l-[3px] transition-all"
-                      style={{ background: ACTIVE_BG, color: ACTIVE_TEXT, borderLeftColor: BRAND_BLUE, fontWeight: 600 }}
-                    >
-                      {label}
-                    </Link>
+                      isActive
+                      label={label}
+                      showDot
+                    />
                   );
                 })
             )}
           </>
         ) : (
-          /* Admin + Regional: show state headers with expandable sister groups */
           <>
-            <div className="font-semibold uppercase tracking-widest px-5 pt-3 pb-2"
-                 style={{ fontSize: "10px", color: "#94a3b8" }}>
+            <div
+              className="font-bold uppercase tracking-widest px-5 pt-3 pb-2"
+              style={{ fontSize: "9px", color: S.labelText }}
+            >
               {userRole === "regional" ? "My State" : "States & Clinics"}
             </div>
 
             {visibleStates.map(state => {
-              const groups      = getSisterGroups(state);
-              const isExpanded  = expandedStates.has(state);
+              const groups        = getSisterGroups(state);
+              const isExpanded    = expandedStates.has(state);
               const isStateActive = activeState === state && !activeSister;
 
               return (
@@ -145,36 +158,54 @@ export default function Sidebar() {
                   <div className="flex items-center">
                     <button
                       onClick={() => handleStateClick(state)}
-                      className="flex-1 flex items-center gap-2 px-5 py-2 text-[13px] border-l-[3px] transition-all text-left"
-                      style={isStateActive
-                        ? { background: ACTIVE_BG, color: ACTIVE_TEXT, borderLeftColor: BRAND_BLUE, fontWeight: 600 }
-                        : { color: "#64748b", borderLeftColor: "transparent" }}
+                      className="flex-1 flex items-center gap-2 px-4 py-2 text-[13px] border-l-[3px] transition-all text-left"
+                      style={{
+                        borderLeftColor: isStateActive ? S.activeBorder : "transparent",
+                        background:      isStateActive ? S.activeBg      : "transparent",
+                        color:           isStateActive ? S.activeText    : S.inactiveText,
+                      }}
+                      onMouseEnter={e => {
+                        if (!isStateActive) {
+                          (e.currentTarget as HTMLElement).style.background = S.hoverBg;
+                          (e.currentTarget as HTMLElement).style.color      = S.hoverText;
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!isStateActive) {
+                          (e.currentTarget as HTMLElement).style.background = "transparent";
+                          (e.currentTarget as HTMLElement).style.color      = S.inactiveText;
+                        }
+                      }}
                     >
                       <span
-                        className="font-bold rounded px-1.5 py-0.5 min-w-[24px] text-center"
+                        className="font-bold rounded px-1.5 py-0.5 min-w-[26px] text-center"
                         style={{
-                          fontSize: "10px",
-                          background: isStateActive ? "rgba(212,241,255,0.4)" : "#f1f5f9",
-                          color: isStateActive ? ACTIVE_TEXT : "#94a3b8",
+                          fontSize: "9.5px",
+                          background: isStateActive ? "rgba(212,241,255,0.18)" : "rgba(255,255,255,0.09)",
+                          color:      isStateActive ? S.activeText : "rgba(255,255,255,0.45)",
+                          letterSpacing: "0.04em",
                         }}
                       >
                         {state}
                       </span>
-                      {STATE_LABELS[state] ?? state}
+                      <span style={{ fontWeight: isStateActive ? 600 : 400 }}>
+                        {STATE_LABELS[state] ?? state}
+                      </span>
                     </button>
+
                     <button
                       onClick={() => toggleCollapse(state)}
-                      className="pr-4 transition-colors text-xs"
-                      style={{ color: "#cbd5e1" }}
-                      onMouseEnter={e => (e.currentTarget.style.color = "#94a3b8")}
-                      onMouseLeave={e => (e.currentTarget.style.color = "#cbd5e1")}
+                      className="pr-4 pl-1 py-2 text-[11px] transition-all"
+                      style={{ color: "rgba(255,255,255,0.25)" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.25)")}
                     >
                       {isExpanded ? "▾" : "▸"}
                     </button>
                   </div>
 
                   {isExpanded && (
-                    <div className="ml-3" style={{ borderLeft: "1px solid #e2e8f0" }}>
+                    <div className="ml-3" style={{ borderLeft: "1px solid rgba(255,255,255,0.08)" }}>
                       {groups.map(group => {
                         const isGroupActive = activeSister === group.sisterFacilityId;
                         const label = group.facNameCombined.replace(/MVC /g, "").trim();
@@ -182,13 +213,30 @@ export default function Sidebar() {
                           <Link
                             key={group.sisterFacilityId}
                             href={`/dashboard?state=${state}&sister=${group.sisterFacilityId}`}
-                            className="flex items-start gap-2 px-4 py-2 text-[12px] border-l-[3px] transition-all leading-snug"
-                            style={isGroupActive
-                              ? { background: ACTIVE_BG, color: ACTIVE_TEXT, borderLeftColor: BRAND_BLUE, fontWeight: 600 }
-                              : { color: "#94a3b8", borderLeftColor: "transparent" }}
+                            className="flex items-start gap-2 px-4 py-2 text-[12px] border-l-[2px] transition-all leading-snug"
+                            style={{
+                              borderLeftColor: isGroupActive ? S.activeBorder : "transparent",
+                              background:      isGroupActive ? S.activeBg      : "transparent",
+                              color:           isGroupActive ? "#7dd3fc"       : "rgba(255,255,255,0.45)",
+                              fontWeight:      isGroupActive ? 600 : 400,
+                            }}
+                            onMouseEnter={e => {
+                              if (!isGroupActive) {
+                                (e.currentTarget as HTMLElement).style.background = S.hoverBg;
+                                (e.currentTarget as HTMLElement).style.color      = "rgba(255,255,255,0.78)";
+                              }
+                            }}
+                            onMouseLeave={e => {
+                              if (!isGroupActive) {
+                                (e.currentTarget as HTMLElement).style.background = "transparent";
+                                (e.currentTarget as HTMLElement).style.color      = "rgba(255,255,255,0.45)";
+                              }
+                            }}
                           >
-                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                                  style={{ background: isGroupActive ? BRAND_BLUE : "#cbd5e1", marginTop: "5px" }} />
+                            <span
+                              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                              style={{ background: isGroupActive ? S.dotActive : S.dotInactive, marginTop: "5px" }}
+                            />
                             {label}
                           </Link>
                         );
@@ -203,29 +251,37 @@ export default function Sidebar() {
       </div>
 
       {/* ── User footer ── */}
-      <div className="px-5 py-3" style={{ borderTop: "1px solid #e2e8f0" }}>
+      <div className="px-4 py-3.5" style={{ borderTop: "1px solid rgba(255,255,255,0.09)" }}>
         <div className="flex items-center gap-2.5 mb-3">
           <div
-            className="w-7 h-7 rounded-full flex items-center justify-center font-bold flex-shrink-0"
-            style={{ fontSize: "11px", background: "rgba(212,241,255,0.5)", border: `1.5px solid ${BRAND_BLUE}`, color: ACTIVE_TEXT }}
+            className="w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0"
+            style={{
+              fontSize: "11px",
+              background: "linear-gradient(135deg, rgba(212,241,255,0.25) 0%, rgba(212,241,255,0.12) 100%)",
+              border: "1.5px solid rgba(212,241,255,0.35)",
+              color: S.activeText,
+              letterSpacing: "0.04em",
+            }}
           >
             {initials}
           </div>
-          <div className="min-w-0">
-            <div className="font-semibold truncate" style={{ fontSize: "12px", color: "#334155" }}>{displayName}</div>
-            <div style={{ fontSize: "10px", color: "#94a3b8" }}>{roleLabel}</div>
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold truncate" style={{ fontSize: "12px", color: "rgba(255,255,255,0.88)" }}>
+              {displayName}
+            </div>
+            <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.38)" }}>{roleLabel}</div>
           </div>
         </div>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="w-full text-left text-[11px] font-medium px-2 py-1.5 rounded-lg transition-all"
-          style={{ color: "#94a3b8" }}
+          className="w-full text-left text-[11px] font-medium px-2.5 py-1.5 rounded-lg transition-all"
+          style={{ color: "rgba(255,255,255,0.35)" }}
           onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.color = "#E7373B";
-            (e.currentTarget as HTMLElement).style.background = "#FFF5F5";
+            (e.currentTarget as HTMLElement).style.color      = "#fca5a5";
+            (e.currentTarget as HTMLElement).style.background = "rgba(231,55,59,0.14)";
           }}
           onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.color = "#94a3b8";
+            (e.currentTarget as HTMLElement).style.color      = "rgba(255,255,255,0.35)";
             (e.currentTarget as HTMLElement).style.background = "transparent";
           }}
         >
@@ -233,5 +289,45 @@ export default function Sidebar() {
         </button>
       </div>
     </nav>
+  );
+}
+
+// ── Reusable nav item ──────────────────────────────────────────────────────────
+function NavItem({
+  href, isActive, label, showDot,
+}: {
+  href: string; isActive: boolean; label: string; showDot?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-2.5 px-4 py-2 text-[13px] border-l-[3px] transition-all"
+      style={{
+        borderLeftColor: isActive ? "#d4f1ff" : "transparent",
+        background:      isActive ? "rgba(212,241,255,0.13)" : "transparent",
+        color:           isActive ? "#d4f1ff" : "rgba(255,255,255,0.58)",
+        fontWeight:      isActive ? 600 : 400,
+      }}
+      onMouseEnter={e => {
+        if (!isActive) {
+          (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.07)";
+          (e.currentTarget as HTMLElement).style.color      = "rgba(255,255,255,0.88)";
+        }
+      }}
+      onMouseLeave={e => {
+        if (!isActive) {
+          (e.currentTarget as HTMLElement).style.background = "transparent";
+          (e.currentTarget as HTMLElement).style.color      = "rgba(255,255,255,0.58)";
+        }
+      }}
+    >
+      {showDot && (
+        <span
+          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+          style={{ background: isActive ? "#d4f1ff" : "rgba(255,255,255,0.3)" }}
+        />
+      )}
+      {label}
+    </Link>
   );
 }

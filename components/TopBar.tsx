@@ -9,9 +9,6 @@ const STATE_LABELS_MAP: Record<string, string> = {
   NJ: "New Jersey", NY: "New York", TX: "Texas",
 };
 
-// Brand blue — used as header background
-const BRAND_BLUE = "#d4f1ff";
-
 export default function TopBar() {
   const searchParams = useSearchParams();
   const state  = searchParams.get("state");
@@ -43,70 +40,82 @@ export default function TopBar() {
   const backHref = crumbs.length > 1 ? (crumbs[crumbs.length - 2].href ?? "/dashboard") : null;
 
   const now     = new Date();
-  const dateStr = now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  const dateStr = now.toLocaleDateString("en-US", {
+    weekday: "short", month: "short", day: "numeric", year: "numeric",
+  });
 
   return (
     <header
-      className="flex-shrink-0"
-      style={{ background: BRAND_BLUE, boxShadow: "0 2px 8px rgba(142,213,248,0.4)" }}
+      className="flex-shrink-0 relative"
+      style={{
+        background: "linear-gradient(135deg, #c8ecf9 0%, #d4f1ff 50%, #cbedfb 100%)",
+        boxShadow: "0 2px 12px rgba(0,40,71,0.1), 0 1px 3px rgba(0,40,71,0.06)",
+        borderBottom: "1px solid rgba(0,60,100,0.1)",
+      }}
     >
-      <div className="px-7 flex items-center justify-between" style={{ height: "68px" }}>
+      {/* Subtle texture overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse 80% 120% at 80% 50%, rgba(255,255,255,0.35) 0%, transparent 70%)",
+        }}
+      />
 
-        {/* ── Left: back button + brand + breadcrumb ── */}
-        <div className="flex items-center gap-4">
+      <div className="relative px-7 flex items-center justify-between" style={{ height: "66px" }}>
 
+        {/* ── Left: back + breadcrumb + title ── */}
+        <div className="flex items-center gap-3">
           {backHref && (
             <Link
               href={backHref}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 transition-all text-[12px] font-semibold"
-              style={{ color: "rgba(0,60,100,0.7)", background: "rgba(255,255,255,0.35)" }}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-all"
+              style={{ color: "rgba(0,40,71,0.65)", background: "rgba(255,255,255,0.5)", border: "1px solid rgba(0,40,71,0.1)" }}
               onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.color      = "rgba(0,60,100,0.95)";
-                (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.55)";
+                (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.75)";
+                (e.currentTarget as HTMLElement).style.color      = "#002847";
               }}
               onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.color      = "rgba(0,60,100,0.7)";
-                (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.35)";
+                (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.5)";
+                (e.currentTarget as HTMLElement).style.color      = "rgba(0,40,71,0.65)";
               }}
             >
-              ← Back
+              <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.8 }}>
+                <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd"/>
+              </svg>
+              Back
             </Link>
           )}
 
           <div>
-            {/* Brand name + breadcrumb path */}
-            <div className="flex items-center gap-1 mb-0.5" style={{ fontSize: "11px" }}>
-              <Link
-                href="/dashboard"
-                className="font-bold transition-opacity hover:opacity-70"
-                style={{ color: "#003c64" }}
-              >
+            {/* Breadcrumb trail */}
+            <div className="flex items-center gap-1" style={{ fontSize: "10.5px" }}>
+              <Link href="/dashboard"
+                    className="font-bold transition-opacity hover:opacity-80"
+                    style={{ color: "#002847" }}>
                 Metro Vein Centers
               </Link>
-              <span style={{ color: "rgba(0,60,100,0.35)" }}>›</span>
-              <span style={{ color: "rgba(0,60,100,0.55)" }}>Ops Dashboard</span>
+              <Chevron />
+              <span style={{ color: "rgba(0,40,71,0.45)" }}>Ops Dashboard</span>
 
               {crumbs.slice(0, -1).map((crumb, i) => (
                 <span key={i} className="flex items-center gap-1">
-                  <span style={{ color: "rgba(0,60,100,0.35)" }}>›</span>
+                  <Chevron />
                   {crumb.href ? (
-                    <Link
-                      href={crumb.href}
-                      className="transition-opacity hover:opacity-70"
-                      style={{ color: "rgba(0,60,100,0.65)" }}
-                    >
+                    <Link href={crumb.href}
+                          className="transition-opacity hover:opacity-80"
+                          style={{ color: "rgba(0,40,71,0.6)" }}>
                       {crumb.label}
                     </Link>
                   ) : (
-                    <span style={{ color: "rgba(0,60,100,0.65)" }}>{crumb.label}</span>
+                    <span style={{ color: "rgba(0,40,71,0.6)" }}>{crumb.label}</span>
                   )}
                 </span>
               ))}
 
               {crumbs.length > 0 && (
                 <span className="flex items-center gap-1">
-                  <span style={{ color: "rgba(0,60,100,0.35)" }}>›</span>
-                  <span style={{ color: "#003c64", fontWeight: 700 }}>
+                  <Chevron />
+                  <span style={{ color: "#002847", fontWeight: 700 }}>
                     {crumbs[crumbs.length - 1].label}
                   </span>
                 </span>
@@ -115,40 +124,42 @@ export default function TopBar() {
 
             {/* Page title */}
             <h1
-              className="font-bold leading-tight tracking-tight"
-              style={{ fontSize: "20px", color: "#002847" }}
+              className="font-extrabold leading-tight tracking-tight mt-0.5"
+              style={{ fontSize: "19px", color: "#002847", letterSpacing: "-0.02em" }}
             >
               {pageTitle}
             </h1>
           </div>
         </div>
 
-        {/* ── Right: live pill + date ── */}
-        <div className="flex items-center gap-3">
+        {/* ── Right: live indicator + date ── */}
+        <div className="flex items-center gap-2.5">
+          {/* Live pill */}
           <div
-            className="flex items-center gap-2 rounded-full px-3 py-1.5"
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5"
             style={{
-              fontSize: "12px",
+              fontSize: "11px",
               fontWeight: 600,
-              color: "#005a2b",
-              background: "rgba(255,255,255,0.55)",
-              border: "1px solid rgba(0,90,43,0.2)",
+              color: "#064e3b",
+              background: "rgba(255,255,255,0.6)",
+              border: "1px solid rgba(5,150,105,0.25)",
+              backdropFilter: "blur(4px)",
             }}
           >
-            <span
-              className="w-1.5 h-1.5 rounded-full animate-pulse"
-              style={{ background: "#16a34a" }}
-            />
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#10b981" }} />
             Live
           </div>
+
+          {/* Date pill */}
           <div
             className="rounded-full px-3 py-1.5"
             style={{
-              fontSize: "12px",
+              fontSize: "11px",
               fontWeight: 500,
-              color: "#003c64",
-              background: "rgba(255,255,255,0.4)",
-              border: "1px solid rgba(0,60,100,0.15)",
+              color: "rgba(0,40,71,0.7)",
+              background: "rgba(255,255,255,0.5)",
+              border: "1px solid rgba(0,40,71,0.1)",
+              backdropFilter: "blur(4px)",
             }}
           >
             {dateStr}
@@ -157,5 +168,13 @@ export default function TopBar() {
 
       </div>
     </header>
+  );
+}
+
+function Chevron() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 20 20" fill="none" style={{ opacity: 0.3, flexShrink: 0 }}>
+      <path d="M7.5 4.5l5 5.5-5 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
   );
 }
