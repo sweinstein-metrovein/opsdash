@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { MOCK_REFERENCES } from "@/lib/mock-data";
+import PhysicianDashboardSection from "./PhysicianDashboardSection";
 
 export default function ReferencesCard() {
   return (
@@ -20,6 +22,11 @@ export default function ReferencesCard() {
             <span className="ml-auto text-slate-300 text-xs">↗</span>
           </a>
         ))}
+
+        {/* Physician weekly dashboards — only renders for users in physician_dashboards table */}
+        <Suspense fallback={null}>
+          <PhysicianDashboardSection />
+        </Suspense>
       </div>
     </div>
   );

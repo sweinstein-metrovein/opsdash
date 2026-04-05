@@ -1188,6 +1188,91 @@ export async function getVoicemailsDetail(filter: ViewFilter): Promise<DetailRes
   };
 }
 
+// ─── PHYSICIAN DASHBOARDS ─────────────────────────────────────────────────────
+
+export interface PhysicianDashboardEntry {
+  providerName:  string;
+  weekStartDate: string;   // "YYYY-MM-DD"
+  dashboardLink: string;
+}
+
+export interface PhysicianStateGroup {
+  state:     string;
+  providers: PhysicianDashboardEntry[];
+}
+
+/** Most-recent dashboard for a single provider email (physician view). */
+export async function getPhysicianDashboardForEmail(
+  email: string
+): Promise<PhysicianDashboardEntry | null> {
+  const safe = email.replace(/'/g, "''");
+  const sql = `
+    SELECT ProviderName, WeekStartDate, DashboardLink
+    FROM ${tbl("physician_dashboards")}
+    WHERE LOWER(ProviderEmail) = LOWER('${safe}')
+    ORDER BY WeekStartDate DESC
+    LIMIT 1
+  `;
+  const rows = await runQuery<Record<string, unknown>>(sql);
+  if (!rows || rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    providerName:  str(r.ProviderName),
+    weekStartDate: formatBQDate(r.WeekStartDate),
+    dashboardLink: str(r.DashboardLink),
+  };
+}
+
+/** Most-recent dashboard per provider within a state (regional view). */
+export async function getPhysicianDashboardsByState(
+  state: string
+): Promise<PhysicianDashboardEntry[]> {
+  const safe = state.replace(/'/g, "''");
+  const sql = `
+    SELECT ProviderName, WeekStartDate, DashboardLink
+    FROM (
+      SELECT ProviderName, WeekStartDate, DashboardLink,
+             ROW_NUMBER() OVER (PARTITION BY ProviderEmail ORDER BY WeekStartDate DESC) AS rn
+      FROM ${tbl("physician_dashboards")}
+      WHERE FacilityState = '${safe}'
+    )
+    WHERE rn = 1
+    ORDER BY ProviderName
+  `;
+  const rows = await runQuery<Record<string, unknown>>(sql);
+  return rows.map(r => ({
+    providerName:  str(r.ProviderName),
+    weekStartDate: formatBQDate(r.WeekStartDate),
+    dashboardLink: str(r.DashboardLink),
+  }));
+}
+
+/** Most-recent dashboard per provider, all states, grouped (admin view). */
+export async function getAllPhysicianDashboards(): Promise<PhysicianStateGroup[]> {
+  const sql = `
+    SELECT FacilityState, ProviderName, WeekStartDate, DashboardLink
+    FROM (
+      SELECT FacilityState, ProviderName, WeekStartDate, DashboardLink,
+             ROW_NUMBER() OVER (PARTITION BY ProviderEmail ORDER BY WeekStartDate DESC) AS rn
+      FROM ${tbl("physician_dashboards")}
+    )
+    WHERE rn = 1
+    ORDER BY FacilityState, ProviderName
+  `;
+  const rows = await runQuery<Record<string, unknown>>(sql);
+  const map = new Map<string, PhysicianDashboardEntry[]>();
+  for (const r of rows) {
+    const s = str(r.FacilityState);
+    if (!map.has(s)) map.set(s, []);
+    map.get(s)!.push({
+      providerName:  str(r.ProviderName),
+      weekStartDate: formatBQDate(r.WeekStartDate),
+      dashboardLink: str(r.DashboardLink),
+    });
+  }
+  return Array.from(map.entries()).map(([state, providers]) => ({ state, providers }));
+}
+
 // ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
 
 export interface NotificationItem {
